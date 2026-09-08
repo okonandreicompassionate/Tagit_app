@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background: #0a0a09;
+  color: #fff;
+}
+
+::selection {
+  background: #fffc00;
+  color: #000;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
