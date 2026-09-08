@@ -226,7 +226,7 @@ export default function EventScreen() {
       <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
         {verified ? (
           <Button
-            label={isActive ? 'Scanning for this event' : 'Tag people here'}
+            label={isActive ? 'Scanning for this event' : 'Tagit people here'}
             variant={isActive ? 'dark' : 'snap'}
             onPress={() => {
               setActiveEvent(event.id);

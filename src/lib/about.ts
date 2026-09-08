@@ -19,7 +19,7 @@ const PLURAL: Record<EventType, string> = {
 /**
  * The profile, derived rather than typed.
  *
- * Nobody writes a bio in Tag. Everything on a profile is computed from
+ * Nobody writes a bio in Tagit. Everything on a profile is computed from
  * verified check-ins and real scans, so it can't be inflated — which is the
  * entire premise: rank should reflect an actual social life, not a bio and a
  * follower count.

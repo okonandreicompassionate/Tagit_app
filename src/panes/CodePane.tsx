@@ -72,7 +72,7 @@ export function CodePane({
   const share = async () => {
     try {
       await Share.share({
-        message: `Add me on Tag — @${me.socials.snap ?? me.id}\n${link}`,
+        message: `Add me on Tagit — @${me.socials.snap ?? me.id}\n${link}`,
         url: link,
       });
     } catch {
@@ -107,8 +107,8 @@ export function CodePane({
         <View style={s.switcher}>
           {(
             [
-              { key: false, label: 'Tag code', sub: 'full profile + swag' },
-              { key: true, label: 'Snapcode', sub: 'works without Tag' },
+              { key: false, label: 'Tagit code', sub: 'full profile + swag' },
+              { key: true, label: 'Snapcode', sub: 'works without Tagit' },
             ] as const
           ).map((opt) => {
             const on = showSnapcode === opt.key;

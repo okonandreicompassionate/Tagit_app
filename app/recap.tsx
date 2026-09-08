@@ -58,7 +58,7 @@ export default function Recap() {
       } else {
         // Expo Go, web, or a failed capture — share the link and let them
         // screenshot the card, which is what people do with these anyway.
-        await Share.share({ message: `My Tag recap — ${encodeTag(me.id)}` });
+        await Share.share({ message: `My Tagit recap — ${encodeTag(me.id)}` });
       }
     } catch {
       // Cancelled or capture failed; nothing worth interrupting the user for.
@@ -80,7 +80,7 @@ export default function Recap() {
 
       <View ref={cardRef} collapsable={false} style={s.story}>
         <View style={s.storyTop}>
-          <Text style={s.wordmark}>TAG</Text>
+          <Text style={s.wordmark}>TAGIT</Text>
           <Text style={s.storyPeriod}>
             {stats.topEvent ? stats.topEvent.name.toUpperCase() : 'ALL TIME'}
           </Text>
@@ -114,7 +114,7 @@ export default function Recap() {
           </View>
         ) : null}
 
-        <Text style={s.storyFoot}>tag.to/u/{me.id}</Text>
+        <Text style={s.storyFoot}>tagit.app/u/{me.id}</Text>
       </View>
 
       <Button

@@ -6,9 +6,9 @@ import { colors, radius } from '../theme';
 /**
  * Someone's genuine Snapcode, Bitmoji included, straight from Snapchat.
  *
- * Why this exists alongside the Tag code: a Tag code carries the whole Tag
+ * Why this exists alongside the Tagit code: a Tagit code carries the whole Tagit
  * identity — swag, streaks, event attribution — but only works if the other
- * person has Tag. A Snapcode works for anyone with Snapchat, which at a party
+ * person has Tagit. A Snapcode works for anyone with Snapchat, which at a party
  * is everyone. So it's the fallback that makes the app useful on day one,
  * before anybody else has installed it.
  */

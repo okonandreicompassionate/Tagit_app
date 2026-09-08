@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tag — test codes</title>
+<title>Tagit — test codes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root { color-scheme: light; }
@@ -40,9 +40,9 @@
 </head>
 <body>
 
-<h1>Tag — test codes</h1>
+<h1>Tagit — test codes</h1>
 <p class="lede">
-  Display this page on your monitor and scan the codes with Tag on your phone.
+  Display this page on your monitor and scan the codes with Tagit on your phone.
   You can't scan your own phone's screen, so this stands in for a second person.
 </p>
 <p class="note">
@@ -53,7 +53,7 @@
 <div class="grid" id="grid"></div>
 
 <footer>
-  Each code encodes <code>https://tag.to/u/&lt;id&gt;</code> — the same short URL
+  Each code encodes <code>https://tagit.app/u/&lt;id&gt;</code> — the same short URL
   the app generates for you. Scan one, and you should get the profile sheet with
   a swag toast, an <em>Add on Snap</em> button, and the person appearing in your
   Tagged list. Scan the same one twice in a day and the second scan should be
@@ -72,7 +72,7 @@
   var grid = document.getElementById('grid');
 
   PEOPLE.forEach(function (p) {
-    var url = 'https://tag.to/u/' + p.id;
+    var url = 'https://tagit.app/u/' + p.id;
 
     var card = document.createElement('div');
     card.className = 'card';

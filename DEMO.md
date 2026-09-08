@@ -1,4 +1,4 @@
-# Demoing Tag on iPhones for $0
+# Demoing Tagit on iPhones for $0
 
 The honest constraint first: **there is no free way to put a standalone iOS app
 on someone else's iPhone.** TestFlight and the App Store both require the Apple
@@ -7,7 +7,7 @@ a free Apple ID needs a Mac, each device's UDID, and re-signing every 7 days —
 useless for real users.
 
 So don't fight that. Demo through **Expo Go** instead, which is a free app on
-the App Store. Your users install Expo Go once, open your link, and Tag runs
+the App Store. Your users install Expo Go once, open your link, and Tagit runs
 inside it — full native camera, real QR scanning, everything.
 
 **Total cost of the demo: $0.** You only pay Apple when you're ready to
@@ -17,7 +17,7 @@ actually launch.
 
 ## What Expo Go can and can't run
 
-Expo Go ships the Expo SDK's own native modules and nothing else. Tag was
+Expo Go ships the Expo SDK's own native modules and nothing else. Tagit was
 checked against that and now fits, with one exception:
 
 | Feature | In Expo Go |
@@ -80,7 +80,7 @@ npx expo start --tunnel
 
 A QR code appears in your terminal. iPhone users install **Expo Go** from the
 App Store, then scan that QR with the **stock Camera app** — it hands off to
-Expo Go and loads Tag. Android users scan it from inside Expo Go.
+Expo Go and loads Tagit. Android users scan it from inside Expo Go.
 
 The tunnel routes over the internet, so they don't need to be on your WiFi.
 Catch: it only lives as long as that terminal is open and your laptop is awake.

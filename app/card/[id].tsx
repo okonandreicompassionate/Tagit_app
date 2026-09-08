@@ -100,7 +100,7 @@ export default function CardSheet() {
       <View style={[s.root, { paddingTop: insets.top + 40 }]}>
         <Empty
           title="No card behind that code"
-          body="It might be an old code, or the person hasn't finished setting up Tag yet."
+          body="It might be an old code, or the person hasn't finished setting up Tagit yet."
         />
         <View style={{ padding: 24 }}>
           <Button label="Back to camera" onPress={() => router.back()} />

@@ -1,4 +1,4 @@
--- Tag — the events layer: discovery, user-created events, verified check-ins,
+-- Tagit — the events layer: discovery, user-created events, verified check-ins,
 -- and paid placement.
 --
 -- Shape of the idea:

@@ -1,4 +1,4 @@
--- Tag — demo cards, so a single phone can test the full scan flow.
+-- Tagit — demo cards, so a single phone can test the full scan flow.
 --
 -- Without these, scanning a test QR against the live backend returns
 -- "No card behind that code": the app's local mock directory is bypassed as

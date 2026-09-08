@@ -1,4 +1,4 @@
-# The Tag API
+# The Tagit API
 
 Every screen in the app is built on four endpoints. They're plain HTTP against
 Supabase's PostgREST layer — no SDK — which is what makes them sellable later:
@@ -112,7 +112,7 @@ Resolves the short code an organiser hands out into an event id.
 ## Selling this later
 
 The natural product is `GET /cards/:handle` as a paid endpoint plus an
-"Add on Tag" button other apps embed — every platform with a stranger-meetup
+"Add on Tagit" button other apps embed — every platform with a stranger-meetup
 problem (dating, marketplace, event ticketing) needs exactly this lookup.
 
 To get there you'd want, roughly in order:
@@ -124,6 +124,6 @@ To get there you'd want, roughly in order:
    `pg_cron` sweep) so nobody scripts a leaderboard.
 3. **API keys + usage counting** for third parties — a `partners` table, a
    `partner_scans` counter, and Paystack for billing per verified lookup.
-4. **A web card at `tag.to/u/:handle`**, so a stock camera app scanning a Tag
+4. **A web card at `tagit.app/u/:handle`**, so a stock camera app scanning a Tagit
    code lands somewhere useful instead of nowhere. This is the cheapest growth
    loop the product has.

@@ -59,15 +59,15 @@ test('a door code is read as an event, not a person', () => {
     kind: 'event',
     eventId: 'evt_flytime',
   });
-  assert.deepEqual(decodeScan('tag://e/evt_flytime'), {
+  assert.deepEqual(decodeScan('tagit://e/evt_flytime'), {
     kind: 'event',
     eventId: 'evt_flytime',
   });
 });
 
 test('accepts deep link and bare id, rejects foreign codes', () => {
-  assert.deepEqual(decodeScan('tag://u/tolu'), { kind: 'user', cardId: 'tolu', eventId: undefined });
-  assert.equal(decodeScan('tag:tolu')?.kind, 'user');
+  assert.deepEqual(decodeScan('tagit://u/tolu'), { kind: 'user', cardId: 'tolu', eventId: undefined });
+  assert.equal(decodeScan('tagit:tolu')?.kind, 'user');
   assert.equal(decodeScan('tolu')?.kind, 'user');
   assert.equal(decodeScan('https://instagram.com/tolu'), null);
   assert.equal(decodeScan('WIFI:S=guest;P=1234;;'), null);

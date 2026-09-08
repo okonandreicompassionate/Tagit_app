@@ -79,7 +79,7 @@ export function ScannerPane({
     (raw: string) => {
       if (locked.current) return;
       const target = decodeScan(raw);
-      // Silently ignore anything that isn't a Tag code — the camera sees a lot.
+      // Silently ignore anything that isn't a Tagit code — the camera sees a lot.
       if (!target) return;
       if (target.kind === 'user' && target.cardId === me?.id) return;
 
@@ -107,7 +107,7 @@ export function ScannerPane({
   );
 
   /**
-   * Tap a sticker, wristband or Tag card. The tag holds the same URL as the
+   * Tap a sticker, wristband or Tagit card. The tag holds the same URL as the
    * equivalent QR code, so it goes through exactly the same handler.
    */
   const tapToScan = useCallback(async () => {
@@ -126,7 +126,7 @@ export function ScannerPane({
   if (!permission.granted) {
     return (
       <View style={[s.root, s.gate, { paddingTop: insets.top + 80 }]}>
-        <Text style={s.gateTitle}>Tag needs the camera</Text>
+        <Text style={s.gateTitle}>Tagit needs the camera</Text>
         <Text style={s.gateBody}>
           That's the whole app — point it at someone's code and they're added. Nothing is recorded
           or uploaded.
@@ -197,7 +197,7 @@ export function ScannerPane({
       </View>
 
       <View style={s.center} pointerEvents="none">
-        <ScanFrame hint={event ? `Scanning at ${event.name}` : 'Point at a Tag code'} />
+        <ScanFrame hint={event ? `Scanning at ${event.name}` : 'Point at a Tagit code'} />
       </View>
 
       {nfcReady ? (

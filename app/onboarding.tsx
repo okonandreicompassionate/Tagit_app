@@ -76,7 +76,7 @@ export default function Onboarding() {
         : '✓ That Snapchat account exists';
     }
     if (snapCheck?.status === 'not-found') return '✗ No Snapchat account with that handle';
-    if (id) return `Your code will be tag.to/u/${id}`;
+    if (id) return `Your code will be tagit.app/u/${id}`;
     return 'This is the anchor of your card';
   })();
   const ready = name.trim().length >= 2 && id.length >= 2;
@@ -101,7 +101,7 @@ export default function Onboarding() {
       // Only blocks when a backend is wired up; offline this always passes.
       const free = await isHandleFree(id).catch(() => true);
       if (!free) {
-        setError(`@${id} is taken on Tag. Try a different Snap handle.`);
+        setError(`@${id} is taken on Tagit. Try a different Snap handle.`);
         return;
       }
       const score = Number(snapScore.replace(/[^\d]/g, ''));
@@ -136,7 +136,7 @@ export default function Onboarding() {
         ]}
         keyboardShouldPersistTaps="handled">
         <View style={{ gap: 6 }}>
-          <Text style={s.wordmark}>TAG</Text>
+          <Text style={s.wordmark}>TAGIT</Text>
           <Text style={s.tagline}>
             The fastest way to add people on Snap in real life. Build your card once — after that
             it's one scan.

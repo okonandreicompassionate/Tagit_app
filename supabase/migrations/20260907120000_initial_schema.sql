@@ -1,4 +1,4 @@
--- Tag — structure: tables, indexes, the swag trigger, seed events.
+-- Tagit — structure: tables, indexes, the swag trigger, seed events.
 --
 -- Written to be idempotent, because this project's schema was first applied by
 -- hand in the SQL editor before migrations existed. Running it again is a

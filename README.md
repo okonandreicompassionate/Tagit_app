@@ -1,4 +1,4 @@
-# Tag
+# Tagit
 
 **The fastest way to add people on Snap in real life.**
 
@@ -38,7 +38,7 @@ npm run typecheck
 app/                     screens (expo-router, file = route)
   index.tsx              the one home screen: a 3-pane horizontal pager
   card/[id].tsx          the post-scan sheet — "Add on Snap" lives here
-  u/[id].tsx             deep link: tag://u/:id and tag.to/u/:id
+  u/[id].tsx             deep link: tagit://u/:id and tagit.app/u/:id
   onboarding.tsx         card builder, first run
   edit.tsx  events.tsx  leaderboard.tsx  recap.tsx
 src/panes/               the three panes of the home screen
@@ -65,10 +65,10 @@ docs/API.md              the four endpoints, and how to sell them later
 - **Nobody types a username.** `openSocial()` jumps into the Snapchat app via
   `snapchat://add/:handle`, falling back to the web profile.
 - **Snap Score sits on the card** — free social proof that already means
-  something here, shown next to your Tag tier.
+  something here, shown next to your Tagit tier.
 - **Codes are short URLs**, not embedded JSON: the code stays low-density so it
   scans fast in bad lighting, and a stock camera app landing on
-  `tag.to/u/:handle` gets a web card instead of nothing.
+  `tagit.app/u/:handle` gets a web card instead of nothing.
 
 ## The game layer
 
@@ -144,7 +144,7 @@ raw `links` graph stays private while the aggregates are public.
   with `owner = null` can still be overwritten by anyone. Tightening the policy
   to `with check (owner = auth.uid())` is a one-line migration — but it must
   come *after* auth is verified, or it locks everyone out of their own card.
-- **`tag.to` doesn't exist.** Register it (or change `TAG_HOST` in
+- **`tagit.app` doesn't exist.** Register it (or change `TAG_HOST` in
   `src/lib/payload.ts`) and put a web card behind `/u/:handle`.
 - **No "they scanned me" path.** The `scanned_by` direction is modelled and
   scored, but nothing writes it yet — that needs the backend to push to the

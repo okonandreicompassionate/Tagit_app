@@ -17,20 +17,21 @@ const payload = (prefixCode: number, rest: string) => [
 test('the first byte expands to a URL prefix', () => {
   // 0x04 = https:// — the abbreviation is what keeps a URL small enough for a
   // cheap tag.
-  assert.equal(decodeUriRecord(payload(0x04, 'tag.to/u/bigsho')), 'https://tag.to/u/bigsho');
-  assert.equal(decodeUriRecord(payload(0x03, 'tag.to/e/evt_1')), 'http://tag.to/e/evt_1');
-  assert.equal(decodeUriRecord(payload(0x02, 'tag.to/u/x')), 'https://www.tag.to/u/x');
+  assert.equal(decodeUriRecord(payload(0x04, 'tagit.app/u/bigsho')), 'https://tagit.app/u/bigsho');
+  assert.equal(decodeUriRecord(payload(0x03, 'tagit.app/e/evt_1')), 'http://tagit.app/e/evt_1');
+  assert.equal(decodeUriRecord(payload(0x02, 'tagit.app/u/x')), 'https://www.tagit.app/u/x');
 });
 
 test('prefix code 0 means the whole URI is spelled out', () => {
-  assert.equal(decodeUriRecord(payload(0x00, 'https://tag.to/u/tolu')), 'https://tag.to/u/tolu');
+  assert.equal(decodeUriRecord(payload(0x00, 'https://tagit.app/u/tolu')), 'https://tagit.app/u/tolu');
 });
 
 test('an unrecognised first byte is kept, not eaten', () => {
   // Some writers store plain text with no prefix byte at all. Dropping the
   // first character would silently corrupt every such tag.
-  const decoded = decodeUriRecord(payload(0x54, 'ag'));
-  assert.equal(decoded, 'Tag');
+  // 0x54 is 'T' — a real byte of the text, not a prefix code.
+  const decoded = decodeUriRecord(payload(0x54, 'icket'));
+  assert.equal(decoded, 'Ticket');
 });
 
 test('empty and missing payloads give up quietly', () => {
@@ -40,19 +41,19 @@ test('empty and missing payloads give up quietly', () => {
 });
 
 test('accepts a Uint8Array as well as a plain array', () => {
-  const bytes = new Uint8Array(payload(0x04, 'tag.to/u/ams'));
-  assert.equal(decodeUriRecord(bytes), 'https://tag.to/u/ams');
+  const bytes = new Uint8Array(payload(0x04, 'tagit.app/u/ams'));
+  assert.equal(decodeUriRecord(bytes), 'https://tagit.app/u/ams');
 });
 
 test('reads the first usable record out of a multi-record tag', () => {
   const tag = {
     ndefMessage: [
       { payload: [] },
-      { payload: payload(0x04, 'tag.to/e/evt_flytime') },
+      { payload: payload(0x04, 'tagit.app/e/evt_flytime') },
       { payload: payload(0x04, 'example.com') },
     ],
   };
-  assert.equal(urlFromTag(tag), 'https://tag.to/e/evt_flytime');
+  assert.equal(urlFromTag(tag), 'https://tagit.app/e/evt_flytime');
 });
 
 test('a tag with nothing readable returns null', () => {
@@ -66,10 +67,10 @@ test('a tag with nothing readable returns null', () => {
 test('a tapped tag lands on exactly the same target as a scanned code', () => {
   // NFC is a second doorway into the system that already exists: the tag
   // carries the same URL, so it resolves through the same decoder.
-  const tapped = urlFromTag({ ndefMessage: [{ payload: payload(0x04, 'tag.to/e/evt_flytime') }] });
+  const tapped = urlFromTag({ ndefMessage: [{ payload: payload(0x04, 'tagit.app/e/evt_flytime') }] });
   assert.deepEqual(decodeScan(tapped!), { kind: 'event', eventId: 'evt_flytime' });
 
-  const card = urlFromTag({ ndefMessage: [{ payload: payload(0x04, 'tag.to/u/bigsho') }] });
+  const card = urlFromTag({ ndefMessage: [{ payload: payload(0x04, 'tagit.app/u/bigsho') }] });
   assert.deepEqual(decodeScan(card!), { kind: 'user', cardId: 'bigsho', eventId: undefined });
 });
 

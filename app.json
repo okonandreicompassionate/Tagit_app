@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Tag",
+    "name": "Tagit",
     "slug": "tag",
     "version": "0.1.0",
-    "scheme": "tag",
+    "scheme": "tagit",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tag.app",
+      "bundleIdentifier": "com.tagit.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Tag opens straight to the camera so you can scan someone's code and add them instantly.",
-        "NSPhotoLibraryUsageDescription": "Pick a photo for your Tag card.",
+        "NSCameraUsageDescription": "Tagit opens straight to the camera so you can scan someone's code and add them instantly.",
+        "NSPhotoLibraryUsageDescription": "Pick a photo for your Tagit card.",
         "LSApplicationQueriesSchemes": [
           "snapchat",
           "instagram",
@@ -21,7 +21,7 @@
           "twitter",
           "whatsapp"
         ],
-        "NFCReaderUsageDescription": "Tag reads NFC stickers and wristbands so you can check in with a tap instead of the camera."
+        "NFCReaderUsageDescription": "Tagit reads NFC stickers and wristbands so you can check in with a tap instead of the camera."
       },
       "entitlements": {
         "com.apple.developer.nfc.readersession.formats": [
@@ -29,11 +29,11 @@
         ]
       },
       "associatedDomains": [
-        "applinks:tag.to"
+        "applinks:tagit.app"
       ]
     },
     "android": {
-      "package": "com.tag.app",
+      "package": "com.tagit.app",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.NFC"
@@ -54,7 +54,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "tag.to",
+              "host": "tagit.app",
               "pathPrefix": "/u"
             }
           ],
@@ -69,7 +69,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "tag.to",
+              "host": "tagit.app",
               "pathPrefix": "/e"
             }
           ],
@@ -89,14 +89,14 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Tag opens straight to the camera so you can scan someone's code and add them instantly.",
+          "cameraPermission": "Tagit opens straight to the camera so you can scan someone's code and add them instantly.",
           "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Pick a photo for your Tag card."
+          "photosPermission": "Pick a photo for your Tagit card."
         }
       ],
       "expo-sharing"

@@ -159,7 +159,7 @@ export default function Search() {
               body={
                 !isLive
                   ? 'People search needs the backend connected.'
-                  : 'Try a name, a nickname, or their Tag handle.'
+                  : 'Try a name, a nickname, or their Tagit handle.'
               }
             />
           }

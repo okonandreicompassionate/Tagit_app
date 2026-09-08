@@ -8,16 +8,16 @@ export type { NdefRecord, NfcTag } from './ndef';
  * NFC — tapping instead of scanning.
  *
  * An NFC sticker is a batteryless chip that stores one short URL: the very
- * same `tag.to/...` link already inside a Tag QR code. So nothing about
+ * same `tagit.app/...` link already inside a Tagit QR code. So nothing about
  * check-ins, links or scoring changes — NFC is a second doorway into the
  * system that already exists, and every tag we write stays readable by any
- * phone even without Tag installed.
+ * phone even without Tagit installed.
  *
  * Two limits worth stating in code, because they shape the whole feature:
  *
  *  - **Two phones cannot tap each other.** iOS cannot emulate an NFC tag at
  *    all, and Android removed phone-to-phone push (Beam) years ago. NFC here
- *    is strictly phone-to-*thing*: wristbands, door stickers, Tag cards,
+ *    is strictly phone-to-*thing*: wristbands, door stickers, Tagit cards,
  *    posters. Phone-to-phone remains the camera.
  *  - **Not available in Expo Go.** This is a third-party native module, so it
  *    is required lazily and every function degrades to "unavailable" rather
@@ -104,7 +104,7 @@ export async function readTagUrl(): Promise<string | null> {
 
 /**
  * Writes a URL onto a blank tag — how a host turns a pack of stickers into
- * door codes, or someone programs their own Tag card.
+ * door codes, or someone programs their own Tagit card.
  */
 export async function writeTagUrl(url: string): Promise<boolean> {
   const mod = load();

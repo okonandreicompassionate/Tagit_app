@@ -79,7 +79,7 @@ export default function DoorCode() {
   const share = async () => {
     try {
       await Share.share({
-        message: `Check in to ${event?.name ?? 'the event'} on Tag\n${url}`,
+        message: `Check in to ${event?.name ?? 'the event'} on Tagit\n${url}`,
         url,
       });
     } catch {
@@ -102,7 +102,7 @@ export default function DoorCode() {
         <Text style={s.name} numberOfLines={2}>
           {event?.name ?? 'Door code'}
         </Text>
-        <Text style={s.instruction}>Scan with Tag to check in</Text>
+        <Text style={s.instruction}>Scan with Tagit to check in</Text>
       </View>
 
       <View style={{ gap: 8, paddingHorizontal: 24 }}>

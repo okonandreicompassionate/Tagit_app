@@ -132,7 +132,7 @@ export default function BoostEvent() {
         disabled={!emailOk || busy || !me}
       />
       <Text style={s.footnote}>
-        Payment is handled entirely by Paystack — Tag never sees your card details.
+        Payment is handled entirely by Paystack — Tagit never sees your card details.
       </Text>
     </ScrollView>
   );

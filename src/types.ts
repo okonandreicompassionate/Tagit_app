@@ -5,7 +5,7 @@ export type SocialKey = 'snap' | 'ig' | 'tiktok' | 'x' | 'whatsapp';
  *
  * Note there is no bio field: the "about me" is derived from where someone has
  * actually been (see `deriveAbout` in src/lib/about.ts), never typed. A profile
- * you can write by hand is a profile you can lie on, which is exactly what Tag
+ * you can write by hand is a profile you can lie on, which is exactly what Tagit
  * exists to get away from.
  */
 export type Card = {

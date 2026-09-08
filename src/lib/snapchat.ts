@@ -28,7 +28,7 @@ export const looksLikeHandle = (h: string) => /^[a-z][a-z0-9._-]{2,14}$/.test(cl
 
 /**
  * Their real Snapcode as a PNG. Scannable by Snapchat itself, so it works for
- * someone who doesn't have Tag installed.
+ * someone who doesn't have Tagit installed.
  */
 export function snapcodeUrl(handle: string, size = 300): string {
   const u = encodeURIComponent(cleanHandle(handle));

@@ -1,4 +1,4 @@
--- Tag — one scan links both people, and the person who was scanned finds out
+-- Tagit — one scan links both people, and the person who was scanned finds out
 -- about it immediately.
 --
 -- Before this, only the scanner recorded anything: A scanned B, A got B's

@@ -128,7 +128,7 @@ export default function EditCard() {
         <View style={s.panel}>
           <TierProgress swag={me.swag} />
           <Text style={s.idNote}>
-            Your code: tag.to/u/{me.id} · fixed, so old codes keep working
+            Your code: tagit.app/u/{me.id} · fixed, so old codes keep working
           </Text>
         </View>
 

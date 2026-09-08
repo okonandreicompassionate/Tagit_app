@@ -1,4 +1,4 @@
--- Tag — row level security, leaderboard views, and column privileges.
+-- Tagit — row level security, leaderboard views, and column privileges.
 --
 -- Split from the structure migration because these are the rules rather than
 -- the shape, and because probing the live REST API turned up three defects in

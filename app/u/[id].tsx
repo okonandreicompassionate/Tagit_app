@@ -1,9 +1,9 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
 /**
- * Handles `tag://u/:id` and the universal-link form of `tag.to/u/:id`, so a
+ * Handles `tagit://u/:id` and the universal-link form of `tagit.app/u/:id`, so a
  * code shared in a chat opens the same sheet as one scanned with the camera.
- * Counts as a link — tapping someone's Tag link is the same intent as scanning
+ * Counts as a link — tapping someone's Tagit link is the same intent as scanning
  * it in person.
  */
 export default function DeepLinkedCard() {
