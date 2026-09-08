@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tag — test codes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 24px 64px;
+    background: #111;
+    color: #fff;
+    font: 15px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+  h1 { font-size: 30px; letter-spacing: -0.03em; margin: 0 0 6px; color: #fffc00; }
+  p.lede { margin: 0 0 4px; color: #999; max-width: 62ch; }
+  p.note { margin: 0 0 28px; color: #666; font-size: 13px; max-width: 62ch; }
+  .grid { display: flex; flex-wrap: wrap; gap: 22px; }
+  .card {
+    background: #fffc00;
+    border-radius: 22px;
+    padding: 18px;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    width: 232px;
+  }
+  .qr { width: 196px; height: 196px; display: grid; place-items: center; }
+  .qr canvas, .qr img { width: 196px !important; height: 196px !important; display: block; }
+  .who { color: #000; text-align: center; display: grid; gap: 1px; }
+  .who b { font-size: 17px; letter-spacing: -0.02em; }
+  .who span { font-size: 12px; font-weight: 600; opacity: 0.7; }
+  .url { font: 11px/1.4 ui-monospace, Consolas, monospace; color: #000; opacity: 0.55; }
+  footer { margin-top: 36px; color: #666; font-size: 13px; max-width: 62ch; }
+  footer code { color: #fffc00; font-family: ui-monospace, Consolas, monospace; }
+</style>
+</head>
+<body>
+
+<h1>Tag — test codes</h1>
+<p class="lede">
+  Display this page on your monitor and scan the codes with Tag on your phone.
+  You can't scan your own phone's screen, so this stands in for a second person.
+</p>
+<p class="note">
+  These resolve only after <code>npm run db:push</code> has seeded the demo
+  cards. Before that, a scan returns &ldquo;No card behind that code&rdquo;.
+</p>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  Each code encodes <code>https://tag.to/u/&lt;id&gt;</code> — the same short URL
+  the app generates for you. Scan one, and you should get the profile sheet with
+  a swag toast, an <em>Add on Snap</em> button, and the person appearing in your
+  Tagged list. Scan the same one twice in a day and the second scan should be
+  worth less, with no streak awarded.
+</footer>
+
+<script>
+  var PEOPLE = [
+    { id: 'bigsho', name: 'Sho',  snap: 'bigsho_' },
+    { id: 'tolu',   name: 'Tolu', snap: 'toluu'   },
+    { id: 'amaka',  name: 'Ams',  snap: 'amaka.o' },
+    { id: 'dami',   name: 'Dee',  snap: 'deecole' },
+    { id: 'zeek',   name: 'Zeek', snap: 'zeekk'   }
+  ];
+
+  var grid = document.getElementById('grid');
+
+  PEOPLE.forEach(function (p) {
+    var url = 'https://tag.to/u/' + p.id;
+
+    var card = document.createElement('div');
+    card.className = 'card';
+
+    var qr = document.createElement('div');
+    qr.className = 'qr';
+    card.appendChild(qr);
+
+    var who = document.createElement('div');
+    who.className = 'who';
+    who.innerHTML = '<b>' + p.name + '</b><span>@' + p.snap + '</span>';
+    card.appendChild(who);
+
+    var url_el = document.createElement('div');
+    url_el.className = 'url';
+    url_el.textContent = url;
+    card.appendChild(url_el);
+
+    grid.appendChild(card);
+
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(qr, {
+        text: url,
+        width: 196,
+        height: 196,
+        colorDark: '#000000',
+        colorLight: '#fffc00',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } else {
+      qr.textContent = 'QR library blocked — check your connection';
+      qr.style.color = '#000';
+    }
+  });
+</script>
+
+</body>
+</html>
