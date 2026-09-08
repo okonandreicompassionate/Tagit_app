@@ -72,8 +72,11 @@ create table if not exists public.links (
 
 -- One scoring row per pair per day: re-scanning a friend all afternoon
 -- shouldn't farm points. Repeat scans are rejected by this index.
+-- The date expression is pinned to UTC because casting a timestamptz to a
+-- date depends on the server's TimeZone setting, which makes it STABLE rather
+-- than IMMUTABLE — and Postgres may refuse a non-immutable index expression.
 create unique index if not exists links_pair_per_day
-  on public.links (from_card, to_card, (created_at::date));
+  on public.links (from_card, to_card, (((created_at at time zone 'UTC'))::date));
 
 create index if not exists links_from_idx  on public.links (from_card);
 create index if not exists links_event_idx on public.links (event_id);
