@@ -62,7 +62,7 @@
 
   <!-- ---------- header ---------- -->
   <header class="grid gap-5">
-    <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">Android · free · no account needed</p>
+    <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">Android · free · v0.2</p>
     <div class="flex items-center gap-4">
       <svg width="72" height="72" viewBox="0 0 120 120" aria-hidden="true" style="flex:none">
       <g stroke="#fffc00" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
@@ -105,6 +105,41 @@
     </div>
   </section>
 
+  <!-- ---------- what's in it ---------- -->
+  <section class="grid gap-4">
+    <h2 class="font-display text-[24px] font-extrabold tracking-[-0.03em]">What it does</h2>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class="grid content-start gap-1.5 rounded-2xl border border-edge bg-surface p-5">
+        <b class="text-[16px] font-bold">Scan someone, add them on Snap</b>
+        <span class="text-[14.5px] text-dim">
+          Opens straight to the camera. One scan, one tap, and they're in your Snapchat — nobody
+          spells a username. One scan links you both.
+        </span>
+      </div>
+      <div class="grid content-start gap-1.5 rounded-2xl border border-edge bg-surface p-5">
+        <b class="text-[16px] font-bold">It remembers the night</b>
+        <span class="text-[14.5px] text-dim">
+          Everyone you meet is saved with where and when. Run into them again and it starts a
+          streak.
+        </span>
+      </div>
+      <div class="grid content-start gap-1.5 rounded-2xl border border-edge bg-surface p-5">
+        <b class="text-[16px] font-bold">Find something to go to</b>
+        <span class="text-[14.5px] text-dim">
+          A full-screen feed of concerts, parties and pop-ups. Host your own in a few taps —
+          public, or invite-only for your friends.
+        </span>
+      </div>
+      <div class="grid content-start gap-1.5 rounded-2xl border border-edge bg-surface p-5">
+        <b class="text-[16px] font-bold">Rank you can't buy</b>
+        <span class="text-[14.5px] text-dim">
+          Points come only from scanning the code at a venue and meeting real people. There is no
+          way to earn them sitting at home.
+        </span>
+      </div>
+    </div>
+  </section>
+
   <!-- ---------- install steps ---------- -->
   <section class="grid gap-4">
     <h2 class="font-display text-[24px] font-extrabold tracking-[-0.03em]">Installing it</h2>
@@ -127,7 +162,11 @@
       </li>
       <li class="grid grid-cols-[30px_minmax(0,1fr)] gap-3 rounded-2xl border border-edge bg-surface p-4">
         <span class="stack text-[22px] text-snap">4</span>
-        <p class="text-[15px] text-dim">Open Tagit. It lands straight on the camera — that's the whole app.</p>
+        <p class="text-[15px] text-dim">
+          Open Tagit and sign in with your phone number or email. That's so your card follows you
+          to a new phone — <strong class="font-semibold text-white">sign in with the same one and
+          everything comes back</strong>.
+        </p>
       </li>
     </ol>
   </section>
@@ -140,6 +179,14 @@
         Apple only allows app installs through the App Store, which needs a paid developer account.
         It's coming — for now iPhone users can run Tagit through the free
         <strong class="font-semibold text-white">Expo Go</strong> app. Ask and we'll send a link.
+      </p>
+    </div>
+    <div class="rounded-2xl border border-edge p-5">
+      <h3 class="text-[15.5px] font-bold">Tap instead of scan</h3>
+      <p class="mt-2 text-[15px] text-dim">
+        If your phone does NFC, you can tap a sticker or wristband to check in instead of aiming a
+        camera in the dark. Two phones can't tap each other — that isn't possible on any phone —
+        so people are still scanned with the camera.
       </p>
     </div>
     <div class="rounded-2xl border border-edge p-5">
@@ -167,7 +214,7 @@
    * single line, not hunting through markup.
    */
   var APK_URL = 'https://expo.dev/artifacts/eas/TAMKWe729zIPTeewlXG5MC0KkdJXNcoDXJWeuJxz-OA.apk';
-  var VERSION = 'v0.1.0';
+  var VERSION = 'v0.2.0';
 
   (function () {
     var link = document.getElementById('dl');
