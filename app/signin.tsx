@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TagitLockup } from '../src/components/TagitMark';
 import { Button, Field } from '../src/components/ui';
 import { myCard } from '../src/lib/account';
 import { parseIdentifier, sendCode, verifyCode } from '../src/lib/auth';
@@ -94,7 +95,7 @@ export default function SignIn() {
         ]}
         keyboardShouldPersistTaps="handled">
         <View style={{ gap: 8 }}>
-          <Text style={s.wordmark}>TAGIT</Text>
+          <TagitLockup size={40} />
           <Text style={s.tagline}>
             {step === 'identify'
               ? 'Sign in so your card follows you to a new phone.'

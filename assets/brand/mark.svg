@@ -1,0 +1,21 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tagit">
+  <!--
+    The Tagit mark: a scan reticle around two linked nodes.
+
+    It is the app's own scanner frame, not a logo bolted on top — the same four
+    corners drawn in src/components/ScanFrame.tsx. Two dots joined by a bar:
+    two people, one scan.
+
+    Kept to strokes on a transparent ground so it can be recoloured for light
+    backgrounds by overriding `stroke` and `fill` on the group.
+  -->
+  <g stroke="#fffc00" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M8,34 L8,8 L34,8" />
+    <path d="M86,8 L112,8 L112,34" />
+    <path d="M8,86 L8,112 L34,112" />
+    <path d="M112,86 L112,112 L86,112" />
+    <line x1="52" y1="60" x2="68" y2="60" stroke-width="7" />
+    <circle cx="44" cy="60" r="9" fill="#fffc00" stroke="none" />
+    <circle cx="76" cy="60" r="9" fill="#fffc00" stroke="none" />
+  </g>
+</svg>

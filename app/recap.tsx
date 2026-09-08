@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TagitMark } from '../src/components/TagitMark';
 import { Avatar, Button } from '../src/components/ui';
 import { displayName, encodeTag } from '../src/lib/payload';
 import { tierFor } from '../src/lib/swag';
@@ -80,7 +81,7 @@ export default function Recap() {
 
       <View ref={cardRef} collapsable={false} style={s.story}>
         <View style={s.storyTop}>
-          <Text style={s.wordmark}>TAGIT</Text>
+          <TagitMark size={26} color={colors.snapInk} />
           <Text style={s.storyPeriod}>
             {stats.topEvent ? stats.topEvent.name.toUpperCase() : 'ALL TIME'}
           </Text>

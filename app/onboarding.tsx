@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TagitLockup } from '../src/components/TagitMark';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { checkHandle, claimCard } from '../src/lib/account';
 import { verifyHandle, type HandleCheck } from '../src/lib/snapchat';
@@ -148,7 +149,7 @@ export default function Onboarding() {
         ]}
         keyboardShouldPersistTaps="handled">
         <View style={{ gap: 6 }}>
-          <Text style={s.wordmark}>TAGIT</Text>
+          <TagitLockup size={40} />
           <Text style={s.tagline}>
             The fastest way to add people on Snap in real life. Build your card once — after that
             it's one scan.
