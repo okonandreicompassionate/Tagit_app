@@ -99,7 +99,8 @@
           "photosPermission": "Pick a photo for your Tagit card."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

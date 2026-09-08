@@ -83,6 +83,8 @@ export type TagEvent = {
   /** Where tickets are sold — deep-linked out to the ticketing partner. */
   ticketUrl?: string;
   cover?: string;
+  /** Poster shown in the feed. Public URL in Supabase Storage. */
+  artwork?: string;
   /** Paid placement. Higher sorts first in discovery while still live. */
   boostScore: number;
   boostedUntil?: number;

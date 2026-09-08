@@ -1,7 +1,7 @@
 import type { CheckIn, EventType, TagEvent, UserResult } from '../types';
 import { findMockEvent, MOCK_EVENTS } from './mock';
 import { esc, isLive, rest } from './rest';
-import { ensureUserId } from './supabase';
+import { authToken, ensureUserId } from './supabase';
 
 /**
  * Events, check-ins, discovery and paid placement.
@@ -26,6 +26,7 @@ type FeedRow = {
   visibility: 'public' | 'private';
   ticket_url: string | null;
   cover: string | null;
+  artwork: string | null;
   sponsored: boolean;
   boost_score: number;
   boosted_until: string | null;
@@ -50,6 +51,7 @@ const toEvent = (r: FeedRow): TagEvent => ({
   visibility: r.visibility ?? 'public',
   ticketUrl: r.ticket_url ?? undefined,
   cover: r.cover ?? undefined,
+  artwork: r.artwork ?? undefined,
   boostScore: r.boost_score ?? 0,
   boostedUntil: ms(r.boosted_until),
   sponsored: r.sponsored ?? false,
@@ -274,6 +276,73 @@ export async function searchUsers(query: string): Promise<UserResult[]> {
 }
 
 /* ---------- paid placement ---------- */
+
+/* ---------- artwork ---------- */
+
+/**
+ * Uploads an event poster and returns its public URL.
+ *
+ * React Native has no File, so the image goes up as an ArrayBuffer read from
+ * the local file URI — FormData with a file object silently uploads zero bytes
+ * on Android, which is a genuinely hard bug to spot because the request
+ * succeeds.
+ */
+export async function uploadArtwork(eventId: string, localUri: string): Promise<string | null> {
+  if (!isLive) return localUri;
+
+  const base = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
+  const token = await authToken();
+  if (!base || !token) return null;
+
+  try {
+    const res = await fetch(localUri);
+    const bytes = await res.arrayBuffer();
+
+    const ext = (localUri.split('.').pop() ?? 'jpg').toLowerCase().slice(0, 4);
+    const type = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const path = `${eventId}/${Date.now()}.${ext}`;
+
+    const upload = await fetch(`${base}/storage/v1/object/artwork/${path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': type,
+        'x-upsert': 'true',
+      },
+      body: bytes,
+    });
+    if (!upload.ok) throw new Error(await upload.text().catch(() => 'upload failed'));
+
+    const publicUrl = `${base}/storage/v1/object/public/artwork/${path}`;
+    await rest(`events?id=eq.${esc(eventId)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ artwork: publicUrl }),
+    });
+    return publicUrl;
+  } catch (err) {
+    if (__DEV__) console.warn('[eventsApi] artwork upload failed:', err);
+    return null;
+  }
+}
+
+/* ---------- private guest lists ---------- */
+
+/** Invites friends to a private event. Only the host may write these. */
+export async function inviteToEvent(
+  eventId: string,
+  cardIds: string[],
+  invitedBy: string
+): Promise<void> {
+  if (!isLive || cardIds.length === 0) return;
+  await rest('event_invites?on_conflict=event_id,card_id', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
+    body: JSON.stringify(
+      cardIds.map((card_id) => ({ event_id: eventId, card_id, invited_by: invitedBy }))
+    ),
+  });
+}
 
 export type BoostQuote = {
   days: number;

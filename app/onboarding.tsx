@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, Button, Field } from '../src/components/ui';
-import { isHandleFree } from '../src/lib/api';
+import { checkHandle, claimCard } from '../src/lib/account';
 import { verifyHandle, type HandleCheck } from '../src/lib/snapchat';
 import { SOCIALS } from '../src/lib/socials';
 import { useTagStore } from '../src/store/useTagStore';
@@ -31,6 +31,7 @@ export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const createMe = useTagStore((s) => s.createMe);
+  const adoptCard = useTagStore((s) => s.adoptCard);
 
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -98,10 +99,21 @@ export default function Onboarding() {
     setBusy(true);
     setError(null);
     try {
-      // Only blocks when a backend is wired up; offline this always passes.
-      const free = await isHandleFree(id).catch(() => true);
-      if (!free) {
-        setError(`@${id} is taken on Tagit. Try a different Snap handle.`);
+      // Three outcomes, and conflating them is what used to lock people out
+      // of their own account: only "taken" should ever refuse.
+      const handle = await checkHandle(id).catch(() => ({ state: 'free' }) as const);
+
+      if (handle.state === 'taken') {
+        setError(`@${id} belongs to another account. If it's yours, sign in with the number you used.`);
+        return;
+      }
+
+      if (handle.state === 'yours' || handle.state === 'claimable') {
+        // The card already exists — this is a returning user, not a new one.
+        // Restore it instead of creating a duplicate.
+        await claimCard(handle.card.id);
+        adoptCard(handle.card);
+        router.replace('/');
         return;
       }
       const score = Number(snapScore.replace(/[^\d]/g, ''));

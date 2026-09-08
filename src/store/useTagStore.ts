@@ -48,6 +48,12 @@ type Actions = {
    * not award anything a second time.
    */
   receiveLink: (card: Card, meta: { eventId?: string; eventName?: string; at: number }) => void;
+  /**
+   * Restores a card fetched from the server after signing in. This is what
+   * "log back in" does — it replaces whatever is on this phone with the
+   * account's real card, rather than starting a second one.
+   */
+  adoptCard: (card: Card) => void;
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
@@ -226,6 +232,8 @@ export const useTagStore = create<State & Actions>()(
           },
         });
       },
+
+      adoptCard: (card) => set({ me: card }),
 
       clearAwards: () => set({ lastAwards: null }),
 

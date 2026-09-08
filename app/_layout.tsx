@@ -25,6 +25,7 @@ export default function RootLayout() {
               animation: 'fade',
             }}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="signin" options={{ animation: 'fade' }} />
             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
             {/* Everything below sits over the camera as a sheet. */}
             <Stack.Screen
@@ -36,6 +37,8 @@ export default function RootLayout() {
             <Stack.Screen name="leaderboard" options={{ presentation: 'modal' }} />
             <Stack.Screen name="events" options={{ presentation: 'modal' }} />
             <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+            {/* Full screen: it's an artwork feed, not a sheet. */}
+            <Stack.Screen name="feed" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="recap" options={{ presentation: 'modal' }} />
             <Stack.Screen
               name="event/[id]"

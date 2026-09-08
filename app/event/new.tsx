@@ -1,6 +1,9 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,7 +14,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Field } from '../../src/components/ui';
-import { createEvent } from '../../src/lib/eventsApi';
+import { createEvent, inviteToEvent, uploadArtwork } from '../../src/lib/eventsApi';
+import { listFriends, type Friend } from '../../src/lib/friends';
+import { isLive } from '../../src/lib/rest';
+import { Avatar } from '../../src/components/ui';
+import { displayName } from '../../src/lib/payload';
 import { useMe, useTagStore } from '../../src/store/useTagStore';
 import { colors, radius, type } from '../../src/theme';
 import { EVENT_TYPE_LABELS, EVENT_TYPES, type EventType } from '../../src/types';
@@ -54,6 +61,31 @@ export default function NewEvent() {
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [picker, setPicker] = useState<'date' | 'time' | null>(null);
+  const [artwork, setArtwork] = useState<string | undefined>();
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [invited, setInvited] = useState<string[]>([]);
+
+  // Only accepted friends can be invited — a pending request isn't a friend yet.
+  useEffect(() => {
+    if (!me || !isLive) return;
+    void listFriends(me.id)
+      .then((all) => setFriends(all.filter((f) => f.status === 'accepted')))
+      .catch(() => setFriends([]));
+  }, [me]);
+
+  const pickArtwork = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      // Portrait, because the feed is full-screen vertical.
+      aspect: [9, 16],
+      quality: 0.7,
+    });
+    if (!result.canceled) setArtwork(result.assets[0]?.uri);
+  };
 
   const ready = name.trim().length >= 2 && !!me;
 
@@ -75,10 +107,30 @@ export default function NewEvent() {
         },
         me.id
       );
+
+      // Poster and guests are best-effort: the event already exists, and
+      // failing either shouldn't throw away what the user just typed.
+      if (artwork) {
+        const url = await uploadArtwork(event.id, artwork);
+        if (url) event.artwork = url;
+      }
+      if (visibility === 'private' && invited.length) {
+        await inviteToEvent(event.id, invited, me.id).catch(() => {
+          setError('Event created, but the invites failed to send. Add guests from the event.');
+        });
+      }
+
       rememberEvent(event);
       router.replace({ pathname: '/event/[id]', params: { id: event.id } });
-    } catch {
-      setError("Couldn't create the event. Check your connection and try again.");
+    } catch (err) {
+      // Show what actually went wrong. Swallowing this is exactly why the
+      // first round of "it's not saving" was impossible to diagnose.
+      const detail = err instanceof Error ? err.message : String(err);
+      setError(
+        detail.toLowerCase().includes('permission') || detail.includes('42501')
+          ? "You're not allowed to create events yet — try signing in again."
+          : `Couldn't create the event. ${detail.slice(0, 160)}`
+      );
     } finally {
       setBusy(false);
     }
@@ -128,23 +180,53 @@ export default function NewEvent() {
             </View>
           </View>
 
-          <View style={{ gap: 6 }}>
+          <View style={{ gap: 8 }}>
             <Text style={s.label}>WHEN</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pick a date"
+                onPress={() => setPicker('date')}
+                style={[s.pickBtn, { flex: 1.3 }]}>
+                <Text style={s.pickLabel}>DATE</Text>
+                <Text style={s.pickValue}>
+                  {startsAt
+                    ? new Date(startsAt).toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                      })
+                    : 'Not set'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pick a time"
+                onPress={() => setPicker('time')}
+                style={[s.pickBtn, { flex: 1 }]}>
+                <Text style={s.pickLabel}>TIME</Text>
+                <Text style={s.pickValue}>
+                  {startsAt
+                    ? new Date(startsAt).toLocaleTimeString(undefined, {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : '--:--'}
+                </Text>
+              </Pressable>
+            </View>
+
             <View style={s.chips}>
-              {PRESETS.map((p) => {
-                const at = p.at();
-                const on = startsAt === at;
-                return (
-                  <Pressable
-                    key={p.label}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setStartsAt(at)}
-                    style={[s.chip, on && s.chipOn]}>
-                    <Text style={[s.chipText, on && s.chipTextOn]}>{p.label}</Text>
-                  </Pressable>
-                );
-              })}
+              {PRESETS.map((p) => (
+                <Pressable
+                  key={p.label}
+                  accessibilityRole="button"
+                  onPress={() => setStartsAt(p.at())}
+                  style={s.chip}>
+                  <Text style={s.chipText}>{p.label}</Text>
+                </Pressable>
+              ))}
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: startsAt === undefined }}
@@ -153,12 +235,43 @@ export default function NewEvent() {
                 <Text style={[s.chipText, startsAt === undefined && s.chipTextOn]}>TBC</Text>
               </Pressable>
             </View>
+
+            {picker ? (
+              <DateTimePicker
+                value={new Date(startsAt ?? atHour(0, 21))}
+                mode={picker}
+                is24Hour={false}
+                // Android shows a modal and fires once; iOS renders inline and
+                // fires continuously, so it stays mounted until dismissed.
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                minimumDate={picker === 'date' ? new Date() : undefined}
+                onChange={(event, picked) => {
+                  if (Platform.OS !== 'ios') setPicker(null);
+                  if (event.type === 'dismissed' || !picked) return;
+
+                  // Each picker edits only its own half of the timestamp,
+                  // otherwise choosing a time silently resets the date.
+                  const base = new Date(startsAt ?? atHour(0, 21));
+                  if (picker === 'date') {
+                    base.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
+                  } else {
+                    base.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
+                  }
+                  setStartsAt(base.getTime());
+                }}
+              />
+            ) : null}
+
+            {Platform.OS === 'ios' && picker ? (
+              <Button label="Done" variant="dark" onPress={() => setPicker(null)} />
+            ) : null}
+
             {startsAt ? (
               <Text style={s.hint}>
                 {new Date(startsAt).toLocaleString(undefined, {
                   weekday: 'long',
                   day: 'numeric',
-                  month: 'short',
+                  month: 'long',
                   hour: 'numeric',
                   minute: '2-digit',
                 })}
@@ -197,6 +310,27 @@ export default function NewEvent() {
           />
         </View>
 
+        <View style={{ gap: 8 }}>
+          <Text style={s.label}>POSTER</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={artwork ? 'Change poster' : 'Add a poster'}
+            onPress={() => void pickArtwork()}
+            style={s.artwork}>
+            {artwork ? (
+              <Image source={{ uri: artwork }} style={s.artworkImg} resizeMode="cover" />
+            ) : (
+              <View style={s.artworkEmpty}>
+                <Text style={s.artworkPlus}>+</Text>
+                <Text style={s.artworkHint}>Add a poster</Text>
+              </View>
+            )}
+          </Pressable>
+          <Text style={s.hint}>
+            Portrait works best — this is what fills the screen in the feed.
+          </Text>
+        </View>
+
         <View style={s.panel}>
           <Text style={s.label}>WHO CAN FIND IT</Text>
           {(
@@ -229,6 +363,43 @@ export default function NewEvent() {
               </Pressable>
             );
           })}
+
+          {visibility === 'private' ? (
+            <View style={{ gap: 8, marginTop: 4 }}>
+              <Text style={s.label}>
+                GUEST LIST{invited.length ? ` · ${invited.length}` : ''}
+              </Text>
+              {friends.length === 0 ? (
+                <Text style={s.hint}>
+                  {isLive
+                    ? 'No friends yet. Scan someone and they can be invited here.'
+                    : 'Guest lists need the backend connected.'}
+                </Text>
+              ) : (
+                friends.map((f) => {
+                  const on = invited.includes(f.card.id);
+                  return (
+                    <Pressable
+                      key={f.card.id}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                      onPress={() =>
+                        setInvited((prev) =>
+                          on ? prev.filter((id) => id !== f.card.id) : [...prev, f.card.id]
+                        )
+                      }
+                      style={[s.guest, on && { borderColor: colors.snap }]}>
+                      <Avatar uri={f.card.avatar} name={f.card.name} size={34} />
+                      <Text style={s.guestName} numberOfLines={1}>
+                        {displayName(f.card)}
+                      </Text>
+                      <Text style={[s.radio, on && { color: colors.snap }]}>{on ? '●' : '○'}</Text>
+                    </Pressable>
+                  );
+                })
+              )}
+            </View>
+          ) : null}
         </View>
 
         {error ? <Text style={s.error}>{error}</Text> : null}
@@ -286,6 +457,39 @@ const s = StyleSheet.create({
   optionLabel: { fontSize: 15, fontWeight: '800', color: colors.text },
   optionSub: { fontSize: 11.5, color: colors.textDim, lineHeight: 16 },
   radio: { fontSize: 16, color: colors.textDim },
-  error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
+  error: { color: colors.danger, fontSize: 13, fontWeight: '600', lineHeight: 19 },
+  pickBtn: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceHi,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 2,
+  },
+  pickLabel: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.7, color: colors.textDim },
+  pickValue: { fontSize: 15, fontWeight: '700', color: colors.text },
+  artwork: {
+    height: 180,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  artworkImg: { width: '100%', height: '100%' },
+  artworkEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  artworkPlus: { fontSize: 30, color: colors.snap, fontWeight: '300' },
+  artworkHint: { fontSize: 12.5, color: colors.textDim, fontWeight: '600' },
+  guest: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 9,
+  },
+  guestName: { flex: 1, fontSize: 14.5, fontWeight: '700', color: colors.text },
   footnote: { fontSize: 11, color: colors.textDim, textAlign: 'center', lineHeight: 16 },
 });

@@ -181,10 +181,10 @@ export function ScannerPane({
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="My recap"
-          onPress={() => router.push('/recap')}
+          accessibilityLabel="Browse events"
+          onPress={() => router.push('/feed')}
           style={s.iconBtn}>
-          <Text style={s.icon}>✨</Text>
+          <Text style={s.icon}>🎟️</Text>
         </Pressable>
 
         <Pressable

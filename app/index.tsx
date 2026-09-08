@@ -1,6 +1,7 @@
 import { Redirect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -12,7 +13,10 @@ import {
 import { CodePane } from '../src/panes/CodePane';
 import { ScannerPane } from '../src/panes/ScannerPane';
 import { TaggedPane } from '../src/panes/TaggedPane';
-import { useMe } from '../src/store/useTagStore';
+import { myCard } from '../src/lib/account';
+import { currentUserId } from '../src/lib/auth';
+import { isLive } from '../src/lib/rest';
+import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors } from '../src/theme';
 
 const PANES = ['Tagged', 'Scan', 'My code'] as const;
@@ -26,6 +30,10 @@ const CAMERA = 1;
 export default function Home() {
   const me = useMe();
   const router = useRouter();
+  const adoptCard = useTagStore((s) => s.adoptCard);
+  // null = still checking. Rendering the app before this resolves would flash
+  // onboarding at someone who is already signed in.
+  const [signedIn, setSignedIn] = useState<boolean | null>(isLive ? null : false);
   const { width } = useWindowDimensions();
   const scroller = useRef<ScrollView>(null);
   const [pane, setPane] = useState<number>(CAMERA);
@@ -43,7 +51,42 @@ export default function Home() {
     if (next !== pane) setPane(next);
   };
 
-  // Hooks first, then the gate — no card means we haven't onboarded yet.
+  useEffect(() => {
+    if (!isLive) return;
+    let alive = true;
+
+    void (async () => {
+      const uid = await currentUserId();
+      if (!alive) return;
+      setSignedIn(Boolean(uid));
+      if (!uid) return;
+
+      // Signed in on a fresh install: pull the account's card back down so the
+      // user lands in the app rather than being asked to sign up again.
+      if (!me) {
+        try {
+          const card = await myCard();
+          if (alive && card) adoptCard(card);
+        } catch {
+          // Offline. Onboarding still resolves the handle as "yours".
+        }
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [me, adoptCard]);
+
+  // Hooks first, then the gates.
+  if (signedIn === null) {
+    return (
+      <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.snap} />
+      </View>
+    );
+  }
+  if (isLive && !signedIn) return <Redirect href="/signin" />;
   if (!me) return <Redirect href="/onboarding" />;
 
   return (

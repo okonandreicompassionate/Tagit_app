@@ -1,10 +1,14 @@
 import type { Card, LeaderRow, TagEvent } from '../types';
 
 /**
- * Seed data so the app is fully usable with no backend — scan a friend's code,
- * or hit "fake a scan" in dev, and get a real card back.
- * Replace by setting EXPO_PUBLIC_SUPABASE_URL (see src/lib/rest.ts).
+ * Fixtures for development and tests only.
+ *
+ * These used to double as a no-backend fallback, which became a liability the
+ * moment a real backend existed: five invented people looked exactly like real
+ * users. Everything below is now gated behind `__DEV__`, so a release build
+ * shows an honest empty state instead of strangers who don't exist.
  */
+const DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
 const card = (
   id: string,
   name: string,
@@ -14,7 +18,7 @@ const card = (
   swag: number
 ): Card => ({ id, name, nickname, socials, snapScore, swag, createdAt: Date.now() });
 
-export const MOCK_CARDS: Card[] = [
+const DEMO_CARDS: Card[] = [
   card('bigsho', 'Oluwaseun Adebayo', 'Sho', { snap: 'bigsho_', ig: 'bigsho', tiktok: 'bigsho' }, 284_500, 1240),
   card('tolu', 'Toluwani Ige', 'Tolu', { snap: 'toluu', ig: 'tolu.ige', whatsapp: '+2348012345678' }, 96_300, 480),
   card('zeek', 'Ezekiel Nnamdi', 'Zeek', { snap: 'zeekk', x: 'zeeknnamdi' }, 41_900, 130),
@@ -38,7 +42,7 @@ const event = (e: Partial<TagEvent> & Pick<TagEvent, 'id' | 'name' | 'type'>): T
   ...e,
 });
 
-export const MOCK_EVENTS: TagEvent[] = [
+const DEMO_EVENTS: TagEvent[] = [
   event({
     id: 'evt_flytime',
     name: 'Flytime Fest',
@@ -96,13 +100,23 @@ export const MOCK_EVENTS: TagEvent[] = [
   }),
 ];
 
-export const MOCK_LEADERBOARD: LeaderRow[] = [
+const DEMO_LEADERBOARD: LeaderRow[] = [
   { cardId: 'bigsho', name: 'Sho', handle: 'bigsho_', swag: 1240, tags: 84 },
   { cardId: 'amaka', name: 'Ams', handle: 'amaka.o', swag: 760, tags: 51 },
   { cardId: 'tolu', name: 'Tolu', handle: 'toluu', swag: 480, tags: 39 },
   { cardId: 'dami', name: 'Dee', handle: 'deecole', swag: 310, tags: 24 },
   { cardId: 'zeek', name: 'Zeek', handle: 'zeekk', swag: 130, tags: 11 },
 ];
+
+
+
+/* ---------- what the app actually imports ---------- */
+
+// Empty in a release build. An empty list renders the real "nothing here yet"
+// state, which is true; a populated one would be a lie.
+export const MOCK_CARDS: Card[] = DEV ? DEMO_CARDS : [];
+export const MOCK_EVENTS: TagEvent[] = DEV ? DEMO_EVENTS : [];
+export const MOCK_LEADERBOARD: LeaderRow[] = DEV ? DEMO_LEADERBOARD : [];
 
 export const findMockCard = (id: string) =>
   MOCK_CARDS.find((c) => c.id.toLowerCase() === id.toLowerCase()) ?? null;

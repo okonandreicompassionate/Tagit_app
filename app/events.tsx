@@ -156,6 +156,7 @@ export default function Events() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
           ListHeaderComponent={
             <View style={{ gap: 12, paddingBottom: 14 }}>
+              <Button label="Browse the feed" variant="dark" onPress={() => router.push('/feed')} />
               <TextInput
                 value={query}
                 onChangeText={setQuery}
@@ -272,12 +273,31 @@ export default function Events() {
             </View>
           }
           renderItem={({ item }) => (
-            <EventCard
-              event={item}
-              active={item.id === activeEventId}
-              hosting={item.hostCardId === me?.id}
-              onPress={() => router.push({ pathname: '/event/[id]', params: { id: item.id } })}
-            />
+            <View>
+              <EventCard
+                event={item}
+                active={item.id === activeEventId}
+                hosting={item.hostCardId === me?.id}
+                onPress={() => router.push({ pathname: '/event/[id]', params: { id: item.id } })}
+              />
+              {/* Boost was previously buried inside the event screen, so a host
+                  had no way to discover they could pay for reach. */}
+              {item.hostCardId === me?.id && item.visibility === 'public' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Boost ${item.name}`}
+                  onPress={() =>
+                    router.push({ pathname: '/event/boost', params: { id: item.id } })
+                  }
+                  style={s.boostRow}>
+                  <Text style={s.boostText}>
+                    {item.boostedUntil && item.boostedUntil > Date.now()
+                      ? '● Boosted — extend'
+                      : '↑ Boost this to reach more people'}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           )}
           ListEmptyComponent={
             <Empty
@@ -376,4 +396,14 @@ const s = StyleSheet.create({
     borderTopColor: colors.border,
   },
   offline: { fontSize: 10, color: colors.textDim, textAlign: 'center' },
+  boostRow: {
+    marginTop: -6,
+    marginBottom: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.snap,
+  },
+  boostText: { fontSize: 12.5, fontWeight: '800', color: colors.snap },
 });
