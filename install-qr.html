@@ -20,6 +20,7 @@
     padding: 40px 24px;
   }
   .stack { display: grid; justify-items: center; gap: 24px; max-width: 520px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
   h1 {
     margin: 0;
     font-size: 44px;
@@ -63,7 +64,20 @@
 <body>
 <div class="stack">
 
-  <h1>TAGIT</h1>
+  <div class="brand">
+    <svg width="52" height="52" viewBox="0 0 120 120" aria-hidden="true">
+      <g stroke="#fffc00" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M8,34 L8,8 L34,8"/>
+        <path d="M86,8 L112,8 L112,34"/>
+        <path d="M8,86 L8,112 L34,112"/>
+        <path d="M112,86 L112,112 L86,112"/>
+        <line x1="52" y1="60" x2="68" y2="60" stroke-width="7"/>
+        <circle cx="44" cy="60" r="9" fill="#fffc00" stroke="none"/>
+        <circle cx="76" cy="60" r="9" fill="#fffc00" stroke="none"/>
+      </g>
+    </svg>
+    <h1>TAGIT</h1>
+  </div>
   <p class="sub">Point an Android phone's camera at this code to install the app.</p>
 
   <div class="tile">
