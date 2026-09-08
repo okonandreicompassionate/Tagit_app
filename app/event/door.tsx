@@ -6,6 +6,7 @@ import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import { Button } from '../../src/components/ui';
+import { cancelNfc, isNfcAvailable, writeTagUrl } from '../../src/lib/nfc';
 import { encodeEvent } from '../../src/lib/payload';
 import { useTagStore } from '../../src/store/useTagStore';
 import { colors, radius, type } from '../../src/theme';
@@ -23,6 +24,19 @@ export default function DoorCode() {
   const insets = useSafeAreaInsets();
   const event = useTagStore((s) => (id ? s.events[id] : undefined));
   const [copied, setCopied] = useState(false);
+  const [nfcReady, setNfcReady] = useState(false);
+  const [writeState, setWriteState] = useState<'idle' | 'writing' | 'done' | 'failed'>('idle');
+
+  useEffect(() => {
+    let alive = true;
+    void isNfcAvailable().then((ok) => {
+      if (alive) setNfcReady(ok);
+    });
+    return () => {
+      alive = false;
+      void cancelNfc();
+    };
+  }, []);
 
   useEffect(() => {
     let previous: number | null = null;
@@ -52,6 +66,14 @@ export default function DoorCode() {
     await Clipboard.setStringAsync(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
+  };
+
+  /** Writes this event's URL to a blank tag. Repeatable for a whole pack. */
+  const writeSticker = async () => {
+    setWriteState('writing');
+    const ok = await writeTagUrl(url);
+    setWriteState(ok ? 'done' : 'failed');
+    setTimeout(() => setWriteState('idle'), 2600);
   };
 
   const share = async () => {
@@ -84,8 +106,26 @@ export default function DoorCode() {
       </View>
 
       <View style={{ gap: 8, paddingHorizontal: 24 }}>
+        {/* Turning a pack of blank stickers into door codes. Only offered
+            where NFC actually works, so it never appears as a dead button. */}
+        {nfcReady ? (
+          <Button
+            label={
+              writeState === 'writing'
+                ? 'Hold a sticker to the phone…'
+                : writeState === 'done'
+                  ? 'Written — tap another to repeat'
+                  : writeState === 'failed'
+                    ? 'Failed — try again'
+                    : '⌁  Write to an NFC sticker'
+            }
+            variant={writeState === 'done' ? 'dark' : 'snap'}
+            onPress={() => void writeSticker()}
+            disabled={writeState === 'writing'}
+          />
+        ) : null}
         <Button label={copied ? 'Link copied' : 'Copy link'} variant="dark" onPress={() => void copy()} />
-        <Button label="Share" onPress={() => void share()} />
+        <Button label="Share" variant="ghost" onPress={() => void share()} />
       </View>
     </View>
   );

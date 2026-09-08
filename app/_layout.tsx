@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { IncomingLinkWatcher } from '../src/components/IncomingLinkWatcher';
 import { useHydrated } from '../src/store/useTagStore';
 import { colors } from '../src/theme';
 
@@ -14,7 +15,10 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         {hydrated ? (
-          <Stack
+          <>
+            {/* One scan shows both people each other. */}
+            <IncomingLinkWatcher />
+            <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: colors.bg },
@@ -40,8 +44,9 @@ export default function RootLayout() {
             <Stack.Screen name="event/new" options={{ presentation: 'modal' }} />
             <Stack.Screen name="event/boost" options={{ presentation: 'modal' }} />
             {/* Full screen, not a sheet: it gets held up at a door. */}
-            <Stack.Screen name="event/door" options={{ animation: 'fade' }} />
-          </Stack>
+              <Stack.Screen name="event/door" options={{ animation: 'fade' }} />
+            </Stack>
+          </>
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={colors.snap} />

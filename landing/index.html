@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Tag — scan-first social for real-world events. Proof you were there, a record of who you met, and a reason to go out again.">
+<meta property="og:title" content="Tag — the app that remembers who you met">
+<meta property="og:description" content="You met forty people last night. By Friday you'll remember four. Tag remembers the rest.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0a09">
+<title>Tag — the app that remembers who you met</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ground: '#0a0a09',
+          surface: '#141412',
+          surfhi: '#1e1e1b',
+          edge: '#2a2a26',
+          dim: '#8c8c84',
+          faint: '#5d5d57',
+          snap: '#fffc00',
+          flame: '#ff6b2c',
+          good: '#2bd97c',
+          ig: '#e1306c',
+        },
+        fontFamily: {
+          display: ['"Bricolage Grotesque"', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          body: ['"IBM Plex Sans"', 'Segoe UI', 'system-ui', 'sans-serif'],
+          mono: ['"IBM Plex Mono"', 'Consolas', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  /* One committed visual world — the app's own: Snap yellow on black, with
+     the energy of a party flyer. Every colour painted explicitly so the page
+     holds on any host background. */
+  body {
+    background: #0a0a09;
+    color: #fff;
+    font-family: '"IBM Plex Sans"', 'Segoe UI', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .stack-type {
+    font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.055em;
+    line-height: 0.8;
+  }
+
+  /* Festival-lineup strip. Duplicated so the loop has no seam. */
+  .marquee { display: flex; width: max-content; animation: slide 34s linear infinite; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* Ticket stubs: notches punched out of the left and right edges. */
+  .stub {
+    background:
+      radial-gradient(circle at 0 50%, transparent 11px, #141412 11px),
+      radial-gradient(circle at 100% 50%, transparent 11px, #141412 11px);
+    background-size: 51% 100%, 51% 100%;
+    background-position: left, right;
+    background-repeat: no-repeat;
+  }
+
+  /* Scan reticle over the fake viewfinder. */
+  .reticle { animation: breathe 2.8s ease-in-out infinite; }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.045); opacity: 1; }
+  }
+
+  /* NFC: rings travelling outward from the tap point. */
+  .ripple { animation: ripple 2.4s ease-out infinite; }
+  .ripple:nth-child(2) { animation-delay: 0.8s; }
+  .ripple:nth-child(3) { animation-delay: 1.6s; }
+  @keyframes ripple {
+    0% { transform: scale(0.35); opacity: 0.9; }
+    100% { transform: scale(1.9); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee, .reticle, .ripple { animation: none; }
+    .ripple { opacity: 0.28; }
+  }
+
+  ::selection { background: #fffc00; color: #000; }
+</style>
+
+</head>
+<body>
+
+<div class="mx-auto max-w-4xl px-5 pb-28 pt-14 sm:px-8">
+
+  <!-- ============ HERO ============ -->
+  <header class="grid gap-7">
+    <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">
+      Scan-first social for real life
+    </p>
+
+    <h1 class="stack-type text-snap text-[26vw] leading-[0.78] sm:text-[170px]">Tag</h1>
+
+    <p class="font-display max-w-[26ch] text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] sm:max-w-none sm:text-[38px]">
+      You met forty people last night.<br class="hidden sm:block">
+      By Friday you'll remember four.
+      <span class="text-snap">Tag remembers the rest.</span>
+    </p>
+  </header>
+
+  <!-- lineup strip -->
+  <div class="mt-10 overflow-hidden border-y border-edge py-3">
+    <div class="marquee gap-8 whitespace-nowrap font-mono text-[12px] uppercase tracking-[0.16em] text-faint">
+      <span class="flex gap-8">
+        <span>Flytime Fest</span><span class="text-snap">◆</span>
+        <span>Unilag Freshers Week</span><span class="text-snap">◆</span>
+        <span>Thrift Pop-Up</span><span class="text-snap">◆</span>
+        <span>Abuja Rooftop Set</span><span class="text-snap">◆</span>
+        <span>Lagos Tech Fest</span><span class="text-snap">◆</span>
+        <span>Detty December</span><span class="text-snap">◆</span>
+      </span>
+      <span class="flex gap-8" aria-hidden="true">
+        <span>Flytime Fest</span><span class="text-snap">◆</span>
+        <span>Unilag Freshers Week</span><span class="text-snap">◆</span>
+        <span>Thrift Pop-Up</span><span class="text-snap">◆</span>
+        <span>Abuja Rooftop Set</span><span class="text-snap">◆</span>
+        <span>Lagos Tech Fest</span><span class="text-snap">◆</span>
+        <span>Detty December</span><span class="text-snap">◆</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- ============ THE PROBLEM ============ -->
+  <section class="mt-16 border-l-[3px] border-snap pl-6">
+    <h2 class="font-display text-[27px] font-extrabold tracking-[-0.03em]" style="text-wrap: balance">
+      The bit everyone already finds annoying
+    </h2>
+    <p class="mt-4 text-dim">
+      You're at a concert. You meet someone good. Out come the phones — you spell your username,
+      they type it wrong, you try again, someone's torch is in your face, the song drops, and you
+      both give up and say <strong class="font-semibold text-white">"I'll find you."</strong>
+    </p>
+    <p class="mt-3 text-dim">
+      You don't find them. And the ones you <em>do</em> add turn into a row of strangers in your
+      followers list, because a username on its own tells you nothing about who they were or why
+      you liked them.
+    </p>
+  </section>
+
+  <!-- ============ HOW A NIGHT GOES ============ -->
+  <section class="mt-20">
+    <h2 class="font-display text-[27px] font-extrabold tracking-[-0.03em]">How a night actually goes</h2>
+    <p class="mt-2 max-w-[62ch] text-dim">
+      Three things happen, in this order. Each one only works because of the one before it.
+    </p>
+
+    <div class="mt-8 grid gap-3">
+      <!-- Numbered because it genuinely is a sequence, not decoration. -->
+      <div class="stub grid grid-cols-[46px_minmax(0,1fr)] gap-5 rounded-2xl px-7 py-6">
+        <span class="stack-type text-[40px] text-snap">1</span>
+        <div>
+          <h3 class="font-display text-[20px] font-semibold tracking-[-0.02em]">
+            You walk in and tap or scan the code on the door
+          </h3>
+          <p class="mt-2 text-[15.5px] text-dim">
+            Every venue or host puts up a code. You scan it and that's you checked in — Tag now
+            knows you were genuinely at that event, on that night.
+          </p>
+          <p class="mt-2 text-[14px] text-faint">
+            This is the part nobody can fake. You can't check in from your bedroom.
+          </p>
+        </div>
+      </div>
+
+      <div class="stub grid grid-cols-[46px_minmax(0,1fr)] gap-5 rounded-2xl px-7 py-6">
+        <span class="stack-type text-[40px] text-snap">2</span>
+        <div>
+          <h3 class="font-display text-[20px] font-semibold tracking-[-0.02em]">
+            You meet someone, and you scan them
+          </h3>
+          <p class="mt-2 text-[15.5px] text-dim">
+            The app opens straight to the camera. Point it at their code and their card appears —
+            name, photo, and one big button:
+            <strong class="font-semibold text-snap">Add on Snap</strong>. One tap opens Snapchat
+            with them already there. Nobody spells anything.
+          </p>
+        </div>
+      </div>
+
+      <div class="stub grid grid-cols-[46px_minmax(0,1fr)] gap-5 rounded-2xl px-7 py-6">
+        <span class="stack-type text-[40px] text-snap">3</span>
+        <div>
+          <h3 class="font-display text-[20px] font-semibold tracking-[-0.02em]">
+            Next week, you still know who they were
+          </h3>
+          <p class="mt-2 text-[15.5px] text-dim">
+            Everyone you scan is saved with the night attached: <em>met at Flytime Fest, Saturday,
+            the one who does photography.</em> Instead of a nameless follower, you get the memory
+            back.
+          </p>
+          <p class="mt-2 text-[14px] text-faint">
+            Run into them again at another event and it starts a streak — a record of a friendship
+            that keeps happening in real life.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- phone -->
+    <div class="mt-12 grid items-center gap-9 sm:grid-cols-[250px_minmax(0,1fr)]">
+      <div class="relative mx-auto h-[520px] w-[250px] overflow-hidden rounded-[36px] border-[7px] border-[#1b1b18] bg-[#04040a] shadow-[0_26px_60px_-30px_rgba(0,0,0,0.95)]">
+        <div class="pointer-events-none absolute -inset-[20%] blur-[30px]"
+             style="background:
+               radial-gradient(38% 30% at 24% 26%, rgba(255,120,40,0.34), transparent 70%),
+               radial-gradient(42% 34% at 76% 66%, rgba(60,90,220,0.32), transparent 70%)"></div>
+        <div class="absolute inset-0"
+             style="background: radial-gradient(120% 80% at 50% 45%, transparent 28%, rgba(0,0,0,0.85) 100%)"></div>
+
+        <div class="absolute left-4 right-4 top-5 grid h-7 place-items-center rounded-full border border-snap bg-black/55 text-[11px] font-bold text-snap">
+          ● Flytime Fest
+        </div>
+
+        <div class="reticle absolute left-1/2 top-1/2 h-[150px] w-[150px] -translate-x-1/2 -translate-y-[56%]">
+          <i class="absolute left-0 top-0 h-8 w-8 rounded-tl-[16px] border-l-[3px] border-t-[3px] border-snap"></i>
+          <i class="absolute right-0 top-0 h-8 w-8 rounded-tr-[16px] border-r-[3px] border-t-[3px] border-snap"></i>
+          <i class="absolute bottom-0 left-0 h-8 w-8 rounded-bl-[16px] border-b-[3px] border-l-[3px] border-snap"></i>
+          <i class="absolute bottom-0 right-0 h-8 w-8 rounded-br-[16px] border-b-[3px] border-r-[3px] border-snap"></i>
+        </div>
+
+        <p class="absolute left-0 right-0 top-[calc(50%+58px)] text-center text-[12px] font-bold [text-shadow:0_1px_8px_rgba(0,0,0,0.9)]">
+          Scanning at Flytime Fest
+        </p>
+
+        <div class="absolute bottom-6 left-1/2 grid h-10 -translate-x-1/2 place-items-center rounded-full bg-snap px-7 text-[14px] font-extrabold text-black">
+          My code
+        </div>
+      </div>
+
+      <div class="grid gap-3">
+        <h3 class="font-display text-[24px] font-extrabold tracking-[-0.03em]" style="text-wrap: balance">
+          It opens on the camera. That's the whole app.
+        </h3>
+        <p class="text-[15.5px] text-dim">
+          No feed to scroll, no home screen, nothing to post. Swipe one way for everyone you met,
+          the other way for your own code. It works the way Snapchat already works, so there's
+          nothing to learn.
+        </p>
+        <p class="text-[15.5px] text-dim">
+          There's a torch for dark rooms, double-tap flips the camera, and your screen goes bright
+          on its own when you hold up your code — because this happens at night, in a crowd.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY IT'S DIFFERENT ============ -->
+  <section class="mt-20">
+    <h2 class="font-display text-[27px] font-extrabold tracking-[-0.03em]">Why it isn't just another social app</h2>
+    <p class="mt-2 max-w-[62ch] text-dim">
+      Every other app scores you on people who've never met you. Tag only counts people who have.
+    </p>
+
+    <div class="mt-7 grid gap-3.5 sm:grid-cols-2">
+      <div class="grid content-start gap-3 rounded-2xl border border-edge p-5">
+        <h3 class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">Normal social media</h3>
+        <ul class="grid gap-2.5 text-[15.5px] text-dim">
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-faint">✕</span><span>Followers you've never spoken to</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-faint">✕</span><span>Anyone can watch you without you knowing</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-faint">✕</span><span>A bio you wrote about yourself</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-faint">✕</span><span>Streaks for opening an app every day</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-faint">✕</span><span>Buy followers, look popular tomorrow</span></li>
+        </ul>
+      </div>
+
+      <div class="grid content-start gap-3 rounded-2xl border border-snap bg-surface p-5">
+        <h3 class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-snap">Tag</h3>
+        <ul class="grid gap-2.5 text-[15.5px] text-white">
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-good">✓</span><span>Only people you've stood next to</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-good">✓</span><span>A link needs <em>both</em> of you to scan — no lurking</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-good">✓</span><span>A profile written by where you've actually been</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-good">✓</span><span>Streaks for running into the same person again</span></li>
+          <li class="grid grid-cols-[16px_minmax(0,1fr)] gap-2.5"><span class="text-good">✓</span><span>Nothing to buy. You'd have to actually go out</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NEW: WHAT'S ON ============ -->
+  <section class="mt-20">
+    <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-snap">New</p>
+    <h2 class="mt-2 font-display text-[27px] font-extrabold tracking-[-0.03em]">And now there's somewhere to go</h2>
+    <p class="mt-2 max-w-[62ch] text-dim">
+      Tag shows you what's on — concerts, parties, meetups, pop-ups, brand launches — filtered by
+      what you're into, your city, and this weekend. Tap through to buy a ticket.
+    </p>
+
+    <div class="mt-7 grid gap-3.5 sm:grid-cols-2">
+      <div class="grid content-start gap-2 rounded-2xl border border-edge bg-surface p-5">
+        <h3 class="text-[17px] font-bold">Anyone can host</h3>
+        <p class="text-[15px] text-dim">
+          A birthday. A listening party. A thing in Lekki on Saturday. Set a place and a time and
+          you've got an event — plus a door code to print, so everyone who turns up is checked in.
+        </p>
+      </div>
+      <div class="grid content-start gap-2 rounded-2xl border border-edge bg-surface p-5">
+        <h3 class="text-[17px] font-bold">Public or invite-only</h3>
+        <p class="text-[15px] text-dim">
+          Public events show up in search so strangers can find them. Invite-only ones are
+          <strong class="font-semibold text-white">never listed anywhere</strong> — the only way in
+          is a link from you.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NEW: TOP SPOT ============ -->
+  <section class="mt-20">
+    <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-snap">New</p>
+    <h2 class="mt-2 font-display text-[27px] font-extrabold tracking-[-0.03em]">Want a crowd? Pay for the top spot</h2>
+    <p class="mt-2 max-w-[62ch] text-dim">
+      Throwing something public and nobody knows about it? Boost it and it climbs the list.
+      Self-serve — pick how many days, pay with your card, done. No emails, no sales call.
+    </p>
+
+    <!-- Feed mock: makes the ranking instantly legible. -->
+    <div class="mt-7 grid gap-2.5 rounded-2xl border border-edge bg-surface p-4">
+      <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">What Discover looks like</p>
+
+      <div class="rounded-xl border border-snap bg-snap/[0.07] p-4">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[12px] font-extrabold text-snap">Tonight · 7:00 PM</span>
+          <span class="rounded-full bg-snap px-2.5 py-0.5 text-[10px] font-extrabold tracking-wide text-black">FEATURED</span>
+        </div>
+        <p class="mt-1 text-[18px] font-bold">Flytime Fest</p>
+        <p class="text-[13px] text-dim">Eko Convention Centre · Lagos · 412 checked in</p>
+      </div>
+
+      <div class="rounded-xl border border-snap/40 p-4">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[12px] font-extrabold text-snap">Tomorrow · 6:00 PM</span>
+          <span class="rounded-full border border-snap px-2.5 py-0.5 text-[10px] font-extrabold tracking-wide text-snap">BOOSTED</span>
+        </div>
+        <p class="mt-1 text-[18px] font-bold">Unilag Freshers Week</p>
+        <p class="text-[13px] text-dim">Unilag Main Campus · 128 checked in</p>
+      </div>
+
+      <div class="rounded-xl border border-edge p-4 opacity-70">
+        <span class="text-[12px] font-extrabold text-snap">Saturday · 12:00 PM</span>
+        <p class="mt-1 text-[18px] font-bold">Thrift Pop-Up</p>
+        <p class="text-[13px] text-dim">Freedom Park · 22 checked in</p>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-xl border border-edge p-4">
+        <p class="stack-type text-[26px] text-snap">₦1,000</p>
+        <p class="mt-1 text-[13px] text-dim">1 day</p>
+      </div>
+      <div class="rounded-xl border border-edge p-4">
+        <p class="stack-type text-[26px] text-snap">₦2,500</p>
+        <p class="mt-1 text-[13px] text-dim">3 days</p>
+      </div>
+      <div class="rounded-xl border border-edge p-4">
+        <p class="stack-type text-[26px] text-snap">₦5,000</p>
+        <p class="mt-1 text-[13px] text-dim">7 days</p>
+      </div>
+    </div>
+
+    <p class="mt-4 text-[14px] text-faint">
+      Boosted and featured events are always labelled. Nobody should have to guess why something
+      is at the top of a list — and a boost can't buy check-ins, only attention.
+    </p>
+  </section>
+
+  <!-- ============ PROFILE ============ -->
+  <section class="mt-20">
+    <h2 class="font-display text-[27px] font-extrabold tracking-[-0.03em]">Your profile writes itself</h2>
+    <p class="mt-2 max-w-[62ch] text-dim">
+      There's no bio box in Tag. You <em>can't</em> type anything about yourself — because a
+      profile you can write by hand is a profile you can lie on. It fills in from the nights you
+      actually turned up to.
+    </p>
+
+    <div class="mt-7 overflow-hidden rounded-2xl border border-edge">
+      <p class="border-b border-edge bg-surface px-5 py-3 font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
+        What earns you rank
+      </p>
+      <div class="flex items-baseline justify-between gap-4 border-b border-edge px-5 py-3">
+        <span class="text-[15.5px] text-dim">Scanning the door code at an event</span>
+        <b class="font-display text-[17px] font-extrabold text-snap">+20</b>
+      </div>
+      <div class="flex items-baseline justify-between gap-4 border-b border-edge px-5 py-3">
+        <span class="text-[15.5px] text-dim">Meeting someone new</span>
+        <b class="font-display text-[17px] font-extrabold text-snap">+10</b>
+      </div>
+      <div class="flex items-baseline justify-between gap-4 border-b border-edge px-5 py-3">
+        <span class="text-[15.5px] text-dim">First person you meet somewhere new</span>
+        <b class="font-display text-[17px] font-extrabold text-snap">+25</b>
+      </div>
+      <div class="flex items-baseline justify-between gap-4 border-b border-edge px-5 py-3">
+        <span class="text-[15.5px] text-dim">Running into someone again</span>
+        <b class="font-display text-[17px] font-extrabold text-snap">+15</b>
+      </div>
+      <div class="flex items-baseline justify-between gap-4 px-5 py-3">
+        <span class="text-[15.5px] text-dim">Being online. Posting. Paying.</span>
+        <b class="font-display text-[17px] font-extrabold text-faint">0</b>
+      </div>
+    </div>
+
+    <p class="mt-6 max-w-[62ch] text-dim">
+      Points stack into a rank everyone can see — and it means something, because the only way up
+      is to leave the house.
+    </p>
+
+    <div class="mt-5 grid gap-2.5">
+      <div class="flex items-center gap-4 rounded-xl border border-edge bg-surface px-4 py-3">
+        <i class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:#8a8a96"></i>
+        <span class="flex-1 text-[16px] font-bold">Fresh</span>
+        <span class="font-mono text-[12.5px] text-dim">just started</span>
+      </div>
+      <div class="flex items-center gap-4 rounded-xl border border-edge bg-surface px-4 py-3">
+        <i class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:#4da3ff"></i>
+        <span class="flex-1 text-[16px] font-bold">Regular</span>
+        <span class="font-mono text-[12.5px] text-dim">100</span>
+      </div>
+      <div class="flex items-center gap-4 rounded-xl border border-edge bg-surface px-4 py-3">
+        <i class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:#2bd97c"></i>
+        <span class="flex-1 text-[16px] font-bold">Connector</span>
+        <span class="font-mono text-[12.5px] text-dim">300</span>
+      </div>
+      <div class="flex items-center gap-4 rounded-xl border border-snap bg-snap/[0.06] px-4 py-3">
+        <i class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:#fffc00"></i>
+        <span class="flex-1 text-[16px] font-bold">Plug</span>
+        <span class="font-mono text-[12.5px] text-snap">750</span>
+      </div>
+      <div class="flex items-center gap-4 rounded-xl border border-edge bg-surface px-4 py-3">
+        <i class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:#ff6b2c"></i>
+        <span class="flex-1 text-[16px] font-bold">Icon</span>
+        <span class="font-mono text-[12.5px] text-dim">1,500</span>
+      </div>
+      <div class="flex items-center gap-4 rounded-xl border border-edge bg-surface px-4 py-3">
+        <i class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:#e1306c"></i>
+        <span class="flex-1 text-[16px] font-bold">Legend</span>
+        <span class="font-mono text-[12.5px] text-dim">3,000</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NFC ============ -->
+  <section class="mt-24">
+    <div class="rounded-3xl border border-snap/45 bg-gradient-to-b from-snap/[0.07] to-transparent p-6 sm:p-9">
+      <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-snap">Coming next</p>
+      <h2 class="mt-2 font-display text-[30px] font-extrabold tracking-[-0.035em] sm:text-[38px]" style="text-wrap: balance">
+        Stop scanning. Just tap.
+      </h2>
+      <p class="mt-3 max-w-[62ch] text-dim">
+        Cameras are the slow part. In a dark, packed room you're squinting, holding a phone
+        steady, waiting for focus. Tapping takes no aim and no light — it works with one hand
+        holding a drink.
+      </p>
+
+      <!-- tap visual -->
+      <div class="mt-9 grid items-center gap-8 sm:grid-cols-[190px_minmax(0,1fr)]">
+        <div class="relative mx-auto grid h-[190px] w-[190px] place-items-center">
+          <i class="ripple absolute h-[150px] w-[150px] rounded-full border-2 border-snap"></i>
+          <i class="ripple absolute h-[150px] w-[150px] rounded-full border-2 border-snap"></i>
+          <i class="ripple absolute h-[150px] w-[150px] rounded-full border-2 border-snap"></i>
+          <div class="relative grid h-[74px] w-[74px] place-items-center rounded-2xl bg-snap">
+            <span class="stack-type text-[22px] text-black">NFC</span>
+          </div>
+        </div>
+
+        <div class="grid gap-4">
+          <div>
+            <h3 class="text-[17px] font-bold">Tap a wristband to check in</h3>
+            <p class="mt-1 text-[15px] text-dim">
+              The venue puts a sticker on the door, or builds it into the wristband. Tap it, you're
+              checked in. No camera, no queue, no fumbling in the dark.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-[17px] font-bold">Tap a Tag card to swap details</h3>
+            <p class="mt-1 text-[15px] text-dim">
+              A card the size of a bank card, a keyring, or a sticker on the back of your phone.
+              Someone taps their phone on it and your profile opens — <strong class="font-semibold text-white">even
+              if they've never heard of Tag</strong>.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-[17px] font-bold">Tap a poster to find the event</h3>
+            <p class="mt-1 text-[15px] text-dim">
+              Flyers on a wall with a tap point. Brands get a physical way into the app, and you
+              get the event without typing anything.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- how it works -->
+      <div class="mt-9 grid gap-3.5 sm:grid-cols-2">
+        <div class="grid content-start gap-2 rounded-2xl border border-edge bg-surface p-5">
+          <h3 class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">How it actually works</h3>
+          <p class="text-[15px] text-dim">
+            An NFC sticker is a tiny chip with no battery, powered by the phone held near it. All
+            it stores is a short web link — the exact same link that's inside a Tag QR code today.
+          </p>
+          <p class="text-[15px] text-dim">
+            So the phone doesn't need to understand Tag. It reads a link and opens it. Your phone
+            supplies the power, the sticker supplies the address.
+          </p>
+        </div>
+        <div class="grid content-start gap-2 rounded-2xl border border-edge bg-surface p-5">
+          <h3 class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">Why it's cheap to do</h3>
+          <p class="text-[15px] text-dim">
+            The links already exist and already work. Nothing about check-ins, points or profiles
+            has to change — NFC is a second doorway into the same system.
+          </p>
+          <p class="text-[15px] text-dim">
+            Blank stickers cost pennies in bulk. A host writes their event's link onto a pack of
+            them from inside the app.
+          </p>
+        </div>
+      </div>
+
+      <!-- the honest limitation -->
+      <div class="mt-4 rounded-2xl border-l-[3px] border-flame bg-surface/60 p-5">
+        <h3 class="text-[16px] font-bold text-flame">One thing it can't do — worth knowing now</h3>
+        <p class="mt-2 text-[15px] text-dim">
+          <strong class="font-semibold text-white">Two phones can't tap each other.</strong> Everyone
+          assumes they can, but iPhones can't pretend to be an NFC tag at all, and Android removed
+          phone-to-phone tapping years ago. Any app promising it is either using something else
+          under the hood, or not working.
+        </p>
+        <p class="mt-2 text-[15px] text-dim">
+          So NFC is for <em>things</em> — wristbands, cards, stickers, posters. Phone-to-phone stays
+          the camera, which already works everywhere and needs nothing extra.
+          <strong class="font-semibold text-white">Tap where there's something to tap; scan
+          otherwise.</strong>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MONEY ============ -->
+  <section class="mt-20">
+    <h2 class="font-display text-[27px] font-extrabold tracking-[-0.03em]">How it makes money</h2>
+    <p class="mt-2 text-dim">Nothing hidden, and nothing that costs the person using it.</p>
+
+    <div class="mt-6 grid gap-3">
+      <div class="grid gap-1.5 rounded-2xl border border-edge bg-surface px-5 py-4">
+        <b class="text-[16.5px] font-bold">Hosts pay to be seen</b>
+        <span class="text-[15px] text-dim">
+          Public event and no crowd yet? Push it up the list from about the price of a night out.
+        </span>
+      </div>
+      <div class="grid gap-1.5 rounded-2xl border border-edge bg-surface px-5 py-4">
+        <b class="text-[16.5px] font-bold">Brands pay for the top slot</b>
+        <span class="text-[15px] text-dim">
+          A launch or a festival buys a featured place in front of exactly the people who go to
+          things. Clearly labelled, so nobody's tricked.
+        </span>
+      </div>
+      <div class="grid gap-1.5 rounded-2xl border border-edge bg-surface px-5 py-4">
+        <b class="text-[16.5px] font-bold">Later: NFC merch and splitting bills</b>
+        <span class="text-[15px] text-dim">
+          Tag cards and branded wristbands to sell, and everyone at the same table splitting the
+          bill in-app instead of arguing about who owes what.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CLOSE ============ -->
+  <div class="mt-24 grid gap-3 rounded-3xl bg-snap px-7 py-9 text-black sm:px-9">
+    <h2 class="font-display text-[28px] font-extrabold leading-[1.08] tracking-[-0.035em] sm:text-[40px]" style="text-wrap: balance">
+      Instagram is a highlight reel.<br>Tag is the receipt.
+    </h2>
+    <p class="text-[16.5px] font-medium opacity-80">
+      Proof you were there, a record of who you met, and a reason to go out again — built on the
+      one thing nobody can buy, fake, or scroll past.
+    </p>
+  </div>
+
+  <p class="mt-8 font-mono text-[11.5px] leading-[1.9] text-faint">
+    Tag — scan-first social for real-world events.<br>
+    Built with React Native. Android build live · iPhone shortly · NFC next.
+  </p>
+
+</div>
+</body>
+</html>

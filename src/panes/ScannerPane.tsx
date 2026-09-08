@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MOCK_CARDS } from '../lib/mock';
+import { cancelNfc, isNfcAvailable, readTagUrl } from '../lib/nfc';
 import { decodeScan } from '../lib/payload';
 import { ScanFrame } from '../components/ScanFrame';
 import { Avatar, Button } from '../components/ui';
@@ -28,6 +29,8 @@ export function ScannerPane({
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
   const [torch, setTorch] = useState(false);
+  const [nfcReady, setNfcReady] = useState(false);
+  const [tapping, setTapping] = useState(false);
   const locked = useRef(false);
   // Timestamp of the last single tap, for double-tap detection.
   const lastTap = useRef(0);
@@ -47,6 +50,19 @@ export function ScannerPane({
       lastTap.current = now;
     }
   }, [flip]);
+
+  // Only offer tapping where it actually works: real hardware, NFC switched
+  // on, and not Expo Go (where the native module isn't bundled).
+  useEffect(() => {
+    let alive = true;
+    void isNfcAvailable().then((ok) => {
+      if (alive) setNfcReady(ok);
+    });
+    return () => {
+      alive = false;
+      void cancelNfc();
+    };
+  }, []);
 
   // Never leave the torch burning on a pane the user has swiped away from —
   // it drains the battery and heats the phone with nothing on screen.
@@ -89,6 +105,21 @@ export function ScannerPane({
     },
     [me?.id, router]
   );
+
+  /**
+   * Tap a sticker, wristband or Tag card. The tag holds the same URL as the
+   * equivalent QR code, so it goes through exactly the same handler.
+   */
+  const tapToScan = useCallback(async () => {
+    if (tapping) return;
+    setTapping(true);
+    try {
+      const url = await readTagUrl();
+      if (url) handleCode(url);
+    } finally {
+      setTapping(false);
+    }
+  }, [tapping, handleCode]);
 
   if (!permission) return <View style={s.root} />;
 
@@ -168,6 +199,18 @@ export function ScannerPane({
       <View style={s.center} pointerEvents="none">
         <ScanFrame hint={event ? `Scanning at ${event.name}` : 'Point at a Tag code'} />
       </View>
+
+      {nfcReady ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tap an NFC sticker or card instead"
+          onPress={() => void tapToScan()}
+          style={s.tapBtn}>
+          <Text style={s.tapText}>
+            {tapping ? 'Hold near the sticker…' : '⌁  or tap a sticker'}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={[s.bottom, { paddingBottom: insets.bottom + 44 }]}>
         {__DEV__ ? (
@@ -252,6 +295,18 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   iconBtnOn: { backgroundColor: colors.snap },
+  tapBtn: {
+    position: 'absolute',
+    top: '64%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.snap,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  tapText: { color: colors.snap, fontSize: 13, fontWeight: '800' },
   icon: { fontSize: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   bottom: { position: 'absolute', bottom: 0, left: 0, right: 0, gap: 12, paddingHorizontal: 16 },

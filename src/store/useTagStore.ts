@@ -42,6 +42,12 @@ type Actions = {
   tag: (card: Card, direction: LinkEvent['direction']) => Award[];
   /** Records attendance. `qr` is verified; `code` is not. */
   checkIn: (event: TagEvent, method: CheckIn['method']) => Award[];
+  /**
+   * Someone scanned *you*. The link and its points were already written and
+   * priced by the database trigger, so this only mirrors it locally — it must
+   * not award anything a second time.
+   */
+  receiveLink: (card: Card, meta: { eventId?: string; eventName?: string; at: number }) => void;
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
@@ -189,6 +195,36 @@ export const useTagStore = create<State & Actions>()(
         if (me) void eventsApi.recordCheckIn({ cardId: me.id, eventId: event.id, method });
 
         return awards;
+      },
+
+      receiveLink: (card, meta) => {
+        const { tagged, me } = get();
+        if (card.id === me?.id) return;
+
+        const existing = tagged[card.id];
+        // Same scan arriving twice (a reconnect replaying it) must not stack.
+        if (existing?.links.some((l) => Math.abs(l.at - meta.at) < 1000)) return;
+
+        const link: LinkEvent = {
+          at: meta.at,
+          eventId: meta.eventId,
+          eventName: meta.eventName,
+          direction: 'scanned_by',
+        };
+        const links = [...(existing?.links ?? []), link];
+
+        set({
+          tagged: {
+            ...tagged,
+            [card.id]: {
+              card,
+              links,
+              streak: streakFrom(links),
+              note: existing?.note,
+              addedOnSnap: existing?.addedOnSnap ?? false,
+            },
+          },
+        });
       },
 
       clearAwards: () => set({ lastAwards: null }),
