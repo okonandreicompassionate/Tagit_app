@@ -67,16 +67,18 @@ create table if not exists public.links (
   direction   text        not null check (direction in ('scanned', 'scanned_by')),
   points      integer     not null default 0 check (points between 0 and 200),
   created_at  timestamptz not null default now(),
+  -- Filled by the links_scan_day trigger; indexed instead of an expression.
+  scan_day    date,
   check (from_card <> to_card)
 );
 
 -- One scoring row per pair per day: re-scanning a friend all afternoon
 -- shouldn't farm points. Repeat scans are rejected by this index.
--- The date expression is pinned to UTC because casting a timestamptz to a
--- date depends on the server's TimeZone setting, which makes it STABLE rather
--- than IMMUTABLE — and Postgres may refuse a non-immutable index expression.
+-- No expression in this index: some Postgres configurations refuse a cast
+-- from timestamptz as non-immutable. scan_day is a plain column kept in step
+-- by a trigger, which nothing can object to.
 create unique index if not exists links_pair_per_day
-  on public.links (from_card, to_card, (((created_at at time zone 'UTC'))::date));
+  on public.links (from_card, to_card, direction, scan_day);
 
 create index if not exists links_from_idx  on public.links (from_card);
 create index if not exists links_event_idx on public.links (event_id);
