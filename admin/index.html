@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tagit — ops</title>
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%20120%22%3E%3Crect%20width%3D%22120%22%20height%3D%22120%22%20fill%3D%22%230a0a09%22%2F%3E%3Cg%20stroke%3D%22%23fffc00%22%20stroke-width%3D%2210%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M14%2C38%20L14%2C14%20L38%2C14%22%2F%3E%3Cpath%20d%3D%22M82%2C14%20L106%2C14%20L106%2C38%22%2F%3E%3Cpath%20d%3D%22M14%2C82%20L14%2C106%20L38%2C106%22%2F%3E%3Cpath%20d%3D%22M106%2C82%20L106%2C106%20L82%2C106%22%2F%3E%3Cline%20x1%3D%2252%22%20y1%3D%2260%22%20x2%3D%2268%22%20y2%3D%2260%22%20stroke-width%3D%228%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2260%22%20r%3D%2210%22%20fill%3D%22%23fffc00%22%20stroke%3D%22none%22%2F%3E%3Ccircle%20cx%3D%2276%22%20cy%3D%2260%22%20r%3D%2210%22%20fill%3D%22%23fffc00%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      colors: { ground:'#0a0a09', surface:'#141412', surfhi:'#1e1e1b', edge:'#2a2a26',
+                dim:'#8c8c84', faint:'#5d5d57', snap:'#fffc00', flame:'#ff6b2c', good:'#2bd97c' },
+      fontFamily: {
+        display:['"Bricolage Grotesque"','Arial','sans-serif'],
+        body:['"IBM Plex Sans"','system-ui','sans-serif'],
+        mono:['"IBM Plex Mono"','Consolas','monospace'],
+      },
+    } },
+  };
+</script>
+
+<style>
+  body { background:#0a0a09; color:#fff; font-family:'"IBM Plex Sans"',system-ui,sans-serif; }
+  .stack { font-family:'Bricolage Grotesque',Arial,sans-serif; font-weight:800; letter-spacing:-0.04em; }
+  .num { font-variant-numeric: tabular-nums; }
+  ::selection { background:#fffc00; color:#000; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="mx-auto max-w-5xl px-5 py-10 sm:px-8">
+
+  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-edge pb-6">
+    <div class="flex items-center gap-3">
+      <svg width="40" height="40" viewBox="0 0 120 120" aria-hidden="true">
+        <g stroke="#fffc00" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M8,34 L8,8 L34,8"/><path d="M86,8 L112,8 L112,34"/>
+          <path d="M8,86 L8,112 L34,112"/><path d="M112,86 L112,112 L86,112"/>
+          <line x1="52" y1="60" x2="68" y2="60" stroke-width="7"/>
+          <circle cx="44" cy="60" r="9" fill="#fffc00" stroke="none"/>
+          <circle cx="76" cy="60" r="9" fill="#fffc00" stroke="none"/>
+        </g>
+      </svg>
+      <div>
+        <h1 class="stack text-[26px] leading-none">Tagit <span class="text-snap">ops</span></h1>
+        <p class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">Read-only · Phase 0</p>
+      </div>
+    </div>
+    <button id="refresh"
+      class="rounded-full border border-edge px-4 py-2 text-[13px] font-bold text-dim transition hover:border-snap hover:text-snap focus:outline-none focus-visible:ring-2 focus-visible:ring-snap/50">
+      Refresh
+    </button>
+  </header>
+
+  <!-- Says plainly what this can and cannot see, so nobody mistakes an empty
+       table for "no activity" when it's really "RLS is doing its job". -->
+  <div class="mt-6 rounded-2xl border-l-[3px] border-flame bg-surface/60 p-5">
+    <h2 class="text-[15px] font-bold text-flame">What this page can't show you</h2>
+    <p class="mt-2 text-[14.5px] leading-relaxed text-dim">
+      It reads the database as an ordinary signed-out user, using the same public key the app
+      ships with. That means it can only ever see what any user could: public events, cards, and
+      the aggregate leaderboards. <strong class="font-semibold text-white">Scans, check-ins,
+      friendships and payments stay invisible</strong> — row-level security hides them, which is
+      the point.
+    </p>
+    <p class="mt-2 text-[14.5px] leading-relaxed text-dim">
+      Seeing those needs a server that holds the <code class="font-mono text-white">service_role</code>
+      key, never a page like this one. See <span class="font-mono text-white">docs/ADMIN.md</span>.
+    </p>
+  </div>
+
+  <div id="error" class="mt-6 hidden rounded-2xl border border-flame bg-surface p-5 text-[14.5px] text-flame"></div>
+
+  <!-- ---------- counters ---------- -->
+  <section class="mt-8 grid gap-3 sm:grid-cols-4">
+    <div class="rounded-2xl border border-edge bg-surface p-5">
+      <p class="stack num text-[34px] text-snap" id="stat-cards">—</p>
+      <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.13em] text-faint">People</p>
+    </div>
+    <div class="rounded-2xl border border-edge bg-surface p-5">
+      <p class="stack num text-[34px] text-snap" id="stat-events">—</p>
+      <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.13em] text-faint">Public events</p>
+    </div>
+    <div class="rounded-2xl border border-edge bg-surface p-5">
+      <p class="stack num text-[34px] text-snap" id="stat-checkins">—</p>
+      <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.13em] text-faint">Check-ins</p>
+    </div>
+    <div class="rounded-2xl border border-edge bg-surface p-5">
+      <p class="stack num text-[34px] text-snap" id="stat-swag">—</p>
+      <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.13em] text-faint">Total swag</p>
+    </div>
+  </section>
+
+  <!-- ---------- events ---------- -->
+  <section class="mt-10">
+    <h2 class="stack text-[22px]">Events</h2>
+    <p class="mt-1 text-[14px] text-dim">Public only. Boosted and featured are labelled, as they are in the app.</p>
+    <div class="mt-4 overflow-x-auto rounded-2xl border border-edge">
+      <table class="w-full min-w-[640px] border-collapse text-left text-[14px]">
+        <thead>
+          <tr class="border-b border-edge bg-surface font-mono text-[10px] uppercase tracking-[0.13em] text-faint">
+            <th class="px-4 py-3 font-semibold">Event</th>
+            <th class="px-4 py-3 font-semibold">When</th>
+            <th class="px-4 py-3 font-semibold">Where</th>
+            <th class="px-4 py-3 font-semibold text-right">Checked in</th>
+            <th class="px-4 py-3 font-semibold">Placement</th>
+          </tr>
+        </thead>
+        <tbody id="events"><tr><td class="px-4 py-5 text-dim" colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- leaderboard ---------- -->
+  <section class="mt-10">
+    <h2 class="stack text-[22px]">Leaderboard</h2>
+    <p class="mt-1 text-[14px] text-dim">
+      Swag is server-computed from verified check-ins and real scans — there is no way to earn it
+      inside the app.
+    </p>
+    <div class="mt-4 overflow-x-auto rounded-2xl border border-edge">
+      <table class="w-full min-w-[560px] border-collapse text-left text-[14px]">
+        <thead>
+          <tr class="border-b border-edge bg-surface font-mono text-[10px] uppercase tracking-[0.13em] text-faint">
+            <th class="px-4 py-3 font-semibold">#</th>
+            <th class="px-4 py-3 font-semibold">Name</th>
+            <th class="px-4 py-3 font-semibold">Handle</th>
+            <th class="px-4 py-3 font-semibold text-right">Swag</th>
+            <th class="px-4 py-3 font-semibold text-right">People met</th>
+          </tr>
+        </thead>
+        <tbody id="board"><tr><td class="px-4 py-5 text-dim" colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="mt-10 font-mono text-[11px] leading-[1.9] text-faint">
+    Tagit ops · reads the public API only · nothing here can change anything.
+  </p>
+</div>
+
+<script>
+  /**
+   * Configuration. These are the same public values the app ships with — the
+   * publishable key is designed to be readable, and every table is still
+   * behind row-level security. Never put a service_role key in this file.
+   */
+  var SUPABASE_URL = 'https://sqwpgyoosurewekiwipt.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_JOBnpffTj2iQskUAWGjhXQ_JsBPfZRY';
+
+  var headers = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function when(iso) {
+    if (!iso) return 'TBC';
+    var d = new Date(iso);
+    var days = Math.round((d.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+    var t = new Date(iso).toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+    if (days < 0) return 'Past';
+    if (days === 0) return 'Tonight · ' + t;
+    if (days === 1) return 'Tomorrow · ' + t;
+    return new Date(iso).toLocaleDateString(undefined, { day:'numeric', month:'short' }) + ' · ' + t;
+  }
+
+  function get(path) {
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: headers }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.statusText); });
+      return r.json();
+    });
+  }
+
+  function showError(message) {
+    var box = document.getElementById('error');
+    box.textContent = message;
+    box.classList.remove('hidden');
+  }
+
+  function load() {
+    document.getElementById('error').classList.add('hidden');
+
+    Promise.all([
+      get('event_feed?select=*&order=starts_at.asc&limit=100'),
+      get('leaderboard?select=*&order=swag.desc&limit=50'),
+    ])
+      .then(function (results) {
+        var events = results[0];
+        var board = results[1];
+
+        // Counters
+        var checkins = events.reduce(function (n, e) { return n + (e.attendee_count || 0); }, 0);
+        var swag = board.reduce(function (n, r) { return n + (r.swag || 0); }, 0);
+        document.getElementById('stat-cards').textContent = board.length;
+        document.getElementById('stat-events').textContent = events.length;
+        document.getElementById('stat-checkins').textContent = checkins;
+        document.getElementById('stat-swag').textContent = swag.toLocaleString();
+
+        // Events
+        var rows = events.map(function (e) {
+          var boosted = e.boosted_until && new Date(e.boosted_until) > new Date();
+          var tag = e.sponsored
+            ? '<span class="rounded-full bg-snap px-2 py-0.5 text-[10px] font-extrabold text-black">FEATURED</span>'
+            : boosted
+              ? '<span class="rounded-full border border-snap px-2 py-0.5 text-[10px] font-extrabold text-snap">BOOSTED</span>'
+              : '<span class="text-faint">—</span>';
+          return '<tr class="border-b border-edge/60 last:border-0">' +
+            '<td class="px-4 py-3 font-semibold">' + esc(e.name) + '</td>' +
+            '<td class="px-4 py-3 text-dim">' + esc(when(e.starts_at)) + '</td>' +
+            '<td class="px-4 py-3 text-dim">' + esc([e.location, e.city].filter(Boolean).join(' · ') || '—') + '</td>' +
+            '<td class="px-4 py-3 text-right num">' + (e.attendee_count || 0) + '</td>' +
+            '<td class="px-4 py-3">' + tag + '</td>' +
+          '</tr>';
+        });
+        document.getElementById('events').innerHTML =
+          rows.join('') || '<tr><td class="px-4 py-5 text-dim" colspan="5">No public events.</td></tr>';
+
+        // Leaderboard
+        var lb = board.map(function (r, i) {
+          return '<tr class="border-b border-edge/60 last:border-0">' +
+            '<td class="px-4 py-3 num text-faint">' + (i + 1) + '</td>' +
+            '<td class="px-4 py-3 font-semibold">' + esc(r.name) + '</td>' +
+            '<td class="px-4 py-3 text-snap">@' + esc(r.handle) + '</td>' +
+            '<td class="px-4 py-3 text-right num font-bold">' + (r.swag || 0).toLocaleString() + '</td>' +
+            '<td class="px-4 py-3 text-right num text-dim">' + (r.tags || 0) + '</td>' +
+          '</tr>';
+        });
+        document.getElementById('board').innerHTML =
+          lb.join('') || '<tr><td class="px-4 py-5 text-dim" colspan="5">Nobody yet.</td></tr>';
+      })
+      .catch(function (err) {
+        showError('Could not reach the database: ' + err.message);
+      });
+  }
+
+  document.getElementById('refresh').addEventListener('click', load);
+  load();
+</script>
+
+</body>
+</html>

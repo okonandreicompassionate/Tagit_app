@@ -64,6 +64,45 @@ begin
 end;
 $$;
 
+/* ---------- check-ins could never be deleted either ---------- */
+
+-- Same omission as links: no DELETE policy, so a check-in row is permanent.
+-- That also means test rows can't be cleared through the API, which is how a
+-- stray check-in ended up on a demo card.
+drop policy if exists checkins_delete_own on public.checkins;
+create policy checkins_delete_own on public.checkins for delete
+  using (
+    exists (select 1 from public.cards c
+             where c.id = checkins.card_id
+               and (c.owner is null or c.owner = auth.uid()))
+  );
+
+/* ---------- clear everything left by testing ---------- */
+
+-- The demo cards exist to be scanned in a demo; they should not carry a score
+-- from anyone verifying the backend.
+delete from public.links
+ where from_card in ('bigsho','tolu','zeek','amaka','dami')
+    or to_card   in ('bigsho','tolu','zeek','amaka','dami');
+
+delete from public.checkins
+ where card_id in ('bigsho','tolu','zeek','amaka','dami');
+
+delete from public.friendships
+ where card_a in ('bigsho','tolu','zeek','amaka','dami')
+    or card_b in ('bigsho','tolu','zeek','amaka','dami');
+
+/* ---------- give the seeded events real dates ---------- */
+
+-- They were inserted with no start time, so every listing reads "TBC" and the
+-- discovery filters have nothing to sort on.
+update public.events set starts_at = now() + interval '3 days' + time '19:00'
+ where id = 'evt_flytime'   and starts_at is null;
+update public.events set starts_at = now() + interval '1 day'  + time '18:00'
+ where id = 'evt_unilag'    and starts_at is null;
+update public.events set starts_at = now() + interval '9 days' + time '10:00'
+ where id = 'evt_techfest'  and starts_at is null;
+
 /* ---------- correct the scores that drifted ---------- */
 
 -- Every card, recomputed from what actually remains. This also clears the
