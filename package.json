@@ -57,7 +57,8 @@
     "build:android": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile preview",
     "prebuild": "expo prebuild --clean",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "link:apk": "node scripts/update-download-link.mjs"
   },
   "private": true,
   "expo": {
