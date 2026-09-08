@@ -149,3 +149,4 @@ raw `links` graph stays private while the aggregates are public.
 - **No "they scanned me" path.** The `scanned_by` direction is modelled and
   scored, but nothing writes it yet — that needs the backend to push to the
   person who was scanned.
+"# Tagit_app" 
