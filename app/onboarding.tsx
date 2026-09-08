@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { isHandleFree } from '../src/lib/api';
+import { verifyHandle, type HandleCheck } from '../src/lib/snapchat';
 import { SOCIALS } from '../src/lib/socials';
 import { useTagStore } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
@@ -41,8 +42,44 @@ export default function Onboarding() {
   const [avatar, setAvatar] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [snapCheck, setSnapCheck] = useState<HandleCheck | 'checking' | null>(null);
 
   const id = useMemo(() => toId(snap), [snap]);
+
+  /**
+   * Check the Snap handle against Snapchat's public profile page when the
+   * field loses focus. A typo here silently breaks the app's single most
+   * important action — the Add on Snap button — and nobody finds out until
+   * someone can't add them.
+   *
+   * Never blocks: an unreachable check leaves the user free to continue.
+   */
+  const checkSnap = async () => {
+    const handle = snap.trim();
+    if (!handle) {
+      setSnapCheck(null);
+      return;
+    }
+    setSnapCheck('checking');
+    const result = await verifyHandle(handle);
+    setSnapCheck(result);
+    // Save them typing their own name if Snapchat already knows it.
+    if (result.status === 'valid' && result.displayName && !name.trim()) {
+      setName(result.displayName);
+    }
+  };
+
+  const snapHint = (() => {
+    if (snapCheck === 'checking') return 'Checking with Snapchat…';
+    if (snapCheck?.status === 'valid') {
+      return snapCheck.displayName
+        ? `✓ Found — ${snapCheck.displayName}`
+        : '✓ That Snapchat account exists';
+    }
+    if (snapCheck?.status === 'not-found') return '✗ No Snapchat account with that handle';
+    if (id) return `Your code will be tag.to/u/${id}`;
+    return 'This is the anchor of your card';
+  })();
   const ready = name.trim().length >= 2 && id.length >= 2;
 
   const pickAvatar = async () => {
@@ -121,10 +158,14 @@ export default function Onboarding() {
           <Field
             label="Snapchat handle"
             value={snap}
-            onChangeText={setSnap}
+            onChangeText={(v) => {
+              setSnap(v);
+              setSnapCheck(null);
+            }}
+            onEndEditing={() => void checkSnap()}
             placeholder="yoursnap"
             autoCapitalize="none"
-            hint={id ? `Your code will be tag.to/u/${id}` : 'This is the anchor of your card'}
+            hint={snapHint}
           />
           <Field
             label="Name"

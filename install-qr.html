@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tag — install</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0a0a09;
+    color: #fff;
+    font: 16px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    padding: 40px 24px;
+  }
+  .stack { display: grid; justify-items: center; gap: 24px; max-width: 520px; }
+  h1 {
+    margin: 0;
+    font-size: 44px;
+    letter-spacing: -0.05em;
+    color: #fffc00;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .sub { margin: 0; color: #8c8c84; text-align: center; }
+  .tile {
+    background: #fffc00;
+    border-radius: 30px;
+    padding: 26px;
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+  }
+  .qr { width: 300px; height: 300px; display: grid; place-items: center; }
+  .qr canvas, .qr img { width: 300px !important; height: 300px !important; display: block; }
+  .tile .cap { color: #000; font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
+  .meta {
+    display: flex;
+    gap: 8px 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font: 12px/1.5 ui-monospace, Consolas, monospace;
+    color: #5d5d57;
+  }
+  ol { margin: 0; padding-left: 22px; color: #8c8c84; font-size: 14px; }
+  ol li { margin-bottom: 6px; }
+  ol b { color: #fff; font-weight: 600; }
+  .warn {
+    border-left: 2px solid #ff6b2c;
+    padding-left: 14px;
+    color: #8c8c84;
+    font-size: 13.5px;
+  }
+  a { color: #fffc00; word-break: break-all; font-size: 12px; font-family: ui-monospace, Consolas, monospace; }
+</style>
+</head>
+<body>
+<div class="stack">
+
+  <h1>TAG</h1>
+  <p class="sub">Point an Android phone's camera at this code to install the app.</p>
+
+  <div class="tile">
+    <div class="qr" id="qr"></div>
+    <div class="cap">Scan to install</div>
+  </div>
+
+  <div class="meta">
+    <span>v0.1.0</span>
+    <span>SDK 57</span>
+    <span>Android APK</span>
+    <span>OTA enabled</span>
+  </div>
+
+  <ol>
+    <li>Scan with the phone's normal <b>Camera app</b> — it opens the download.</li>
+    <li>Tap the downloaded file to install.</li>
+    <li>Android will say the app is from an <b>unknown source</b> — allow it. That's
+      normal for any APK outside the Play Store.</li>
+    <li>Open <b>Tag</b>. It should land straight on the camera.</li>
+  </ol>
+
+  <p class="warn">
+    Android only. iPhones can't install an APK — that needs Apple's $99/yr
+    Developer Program, so iPhone users still go through Expo Go for now.
+  </p>
+
+  <a id="raw" href="#"></a>
+
+</div>
+
+<script>
+  // Current EAS artifact. Replaced each time a new build finishes.
+  var APK_URL = 'https://expo.dev/artifacts/eas/NTsNa7MbR0YB5Bl8LfGB4t-X0oSEaYi22sFgDqr-o8w.apk';
+
+  var raw = document.getElementById('raw');
+  raw.href = APK_URL;
+  raw.textContent = APK_URL;
+
+  var host = document.getElementById('qr');
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(host, {
+      text: APK_URL,
+      width: 300,
+      height: 300,
+      colorDark: '#000000',
+      colorLight: '#fffc00',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } else {
+    host.textContent = 'QR library blocked — use the link below';
+    host.style.color = '#000';
+  }
+</script>
+</body>
+</html>

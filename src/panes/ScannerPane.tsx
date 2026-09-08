@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MOCK_CARDS } from '../lib/mock';
@@ -27,7 +27,37 @@ export function ScannerPane({
   const event = useActiveEvent();
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [torch, setTorch] = useState(false);
   const locked = useRef(false);
+  // Timestamp of the last single tap, for double-tap detection.
+  const lastTap = useRef(0);
+
+  const flip = useCallback(() => {
+    setFacing((f) => (f === 'back' ? 'front' : 'back'));
+    if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  /** Double-tap the viewfinder to flip, the way Snapchat does. */
+  const onViewfinderTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTap.current < 280) {
+      lastTap.current = 0;
+      flip();
+    } else {
+      lastTap.current = now;
+    }
+  }, [flip]);
+
+  // Never leave the torch burning on a pane the user has swiped away from —
+  // it drains the battery and heats the phone with nothing on screen.
+  useEffect(() => {
+    if (!active && torch) setTorch(false);
+  }, [active, torch]);
+
+  // The front camera has no torch to switch on.
+  useEffect(() => {
+    if (facing === 'front' && torch) setTorch(false);
+  }, [facing, torch]);
 
   const handleCode = useCallback(
     (raw: string) => {
@@ -76,10 +106,21 @@ export function ScannerPane({
         <CameraView
           style={StyleSheet.absoluteFill}
           facing={facing}
+          enableTorch={torch && facing === 'back'}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           onBarcodeScanned={({ data }) => handleCode(data)}
         />
       ) : null}
+
+      {/* Tap target for the double-tap flip. Sits under the control bars, and
+          responds only to taps that don't move, so the pager still swipes. */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onViewfinderTap}
+        accessibilityRole="button"
+        accessibilityLabel="Double tap to switch camera"
+      />
+
 
       <View style={[s.top, { paddingTop: insets.top + 8 }]}>
         <Pressable
@@ -101,6 +142,14 @@ export function ScannerPane({
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="My recap"
+          onPress={() => router.push('/recap')}
+          style={s.iconBtn}>
+          <Text style={s.icon}>✨</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Leaderboard"
           onPress={() => router.push('/leaderboard')}
           style={s.iconBtn}>
@@ -108,7 +157,7 @@ export function ScannerPane({
         </Pressable>
       </View>
 
-      <View style={s.center}>
+      <View style={s.center} pointerEvents="none">
         <ScanFrame hint={event ? `Scanning at ${event.name}` : 'Point at a Tag code'} />
       </View>
 
@@ -123,12 +172,20 @@ export function ScannerPane({
         ) : null}
 
         <View style={s.bottomRow}>
+          {/* Bottom-left, under the thumb: these rooms are dark and the torch
+              gets reached for constantly. */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Flip camera"
-            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
-            style={s.iconBtn}>
-            <Text style={s.icon}>🔄</Text>
+            accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}
+            accessibilityState={{ selected: torch }}
+            disabled={facing === 'front'}
+            onPress={() => setTorch((t) => !t)}
+            style={[
+              s.iconBtn,
+              torch && s.iconBtnOn,
+              facing === 'front' && { opacity: 0.35 },
+            ]}>
+            <Text style={s.icon}>{torch ? '🔆' : '🔅'}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -139,10 +196,10 @@ export function ScannerPane({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="My recap"
-            onPress={() => router.push('/recap')}
+            accessibilityLabel="Flip camera"
+            onPress={flip}
             style={s.iconBtn}>
-            <Text style={s.icon}>✨</Text>
+            <Text style={s.icon}>🔄</Text>
           </Pressable>
         </View>
       </View>
@@ -186,6 +243,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconBtnOn: { backgroundColor: colors.snap },
   icon: { fontSize: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   bottom: { position: 'absolute', bottom: 0, left: 0, right: 0, gap: 12, paddingHorizontal: 16 },
