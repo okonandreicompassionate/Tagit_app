@@ -7,6 +7,8 @@ export const POINTS = {
   repeatLink: 3,
   streakKept: 15,
   firstAtEvent: 25,
+  /** Scanning the door code. Only the verified kind pays. */
+  checkIn: 20,
 } as const;
 
 export const TIERS = [
@@ -114,6 +116,27 @@ export function pointsForLink(args: {
   }
 
   return awards;
+}
+
+/**
+ * What a check-in is worth.
+ *
+ * Two rules keep this honest, and they're the whole reason rank means
+ * anything here:
+ *  - Only `qr` pays. Typing an event code you were told over WhatsApp is not
+ *    evidence you went, so it earns nothing.
+ *  - Once per event, ever. Re-scanning the door on your way back from the bar
+ *    isn't a second night out.
+ */
+export function pointsForCheckIn(args: {
+  method: 'qr' | 'code';
+  eventId: string;
+  /** Event ids the user has already checked into. */
+  eventsCheckedIn: string[];
+}): Award[] {
+  if (args.method !== 'qr') return [];
+  if (args.eventsCheckedIn.includes(args.eventId)) return [];
+  return [{ rule: 'checkIn', points: POINTS.checkIn, label: 'Checked in' }];
 }
 
 export const totalPoints = (awards: Award[]) => awards.reduce((sum, a) => sum + a.points, 0);

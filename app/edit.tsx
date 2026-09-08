@@ -34,7 +34,6 @@ export default function EditCard() {
 
   const [name, setName] = useState(me?.name ?? '');
   const [nickname, setNickname] = useState(me?.nickname ?? '');
-  const [bio, setBio] = useState(me?.bio ?? '');
   const [avatar, setAvatar] = useState(me?.avatar);
   const [snapScore, setSnapScore] = useState(me?.snapScore ? String(me.snapScore) : '');
   const [socials, setSocials] = useState<Partial<Record<SocialKey, string>>>(me?.socials ?? {});
@@ -80,7 +79,6 @@ export default function EditCard() {
     await updateMe({
       name: name.trim() || me.name,
       nickname: nickname.trim() || undefined,
-      bio: bio.trim() || undefined,
       avatar,
       snapScore: Number.isFinite(score) && score > 0 ? score : undefined,
       socials: cleaned,
@@ -142,14 +140,6 @@ export default function EditCard() {
             onChangeText={setNickname}
             autoCapitalize="words"
             placeholder="Optional"
-          />
-          <Field
-            label="Vibe line"
-            value={bio}
-            onChangeText={setBio}
-            maxLength={80}
-            autoCapitalize="sentences"
-            placeholder="One line about you"
           />
         </View>
 

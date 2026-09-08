@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MOCK_CARDS } from '../lib/mock';
-import { decodeTag } from '../lib/payload';
+import { decodeScan } from '../lib/payload';
 import { ScanFrame } from '../components/ScanFrame';
 import { Avatar, Button } from '../components/ui';
 import { useActiveEvent, useMe } from '../store/useTagStore';
@@ -62,19 +62,27 @@ export function ScannerPane({
   const handleCode = useCallback(
     (raw: string) => {
       if (locked.current) return;
-      const decoded = decodeTag(raw);
+      const target = decodeScan(raw);
       // Silently ignore anything that isn't a Tag code — the camera sees a lot.
-      if (!decoded || decoded.cardId === me?.id) return;
+      if (!target) return;
+      if (target.kind === 'user' && target.cardId === me?.id) return;
 
       locked.current = true;
       if (Platform.OS !== 'web') {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      router.push({
-        pathname: '/card/[id]',
+
+      if (target.kind === 'event') {
+        // A door code checks you in — the verified kind of attendance.
+        router.push({ pathname: '/event/[id]', params: { id: target.eventId, checkin: '1' } });
+      } else {
         // `scan: 1` is what tells the sheet to actually record the link.
-        params: { id: decoded.cardId, event: decoded.eventId ?? '', scan: '1' },
-      });
+        router.push({
+          pathname: '/card/[id]',
+          params: { id: target.cardId, event: target.eventId ?? '', scan: '1' },
+        });
+      }
+
       setTimeout(() => {
         locked.current = false;
       }, SCAN_COOLDOWN_MS);

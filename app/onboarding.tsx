@@ -35,7 +35,6 @@ export default function Onboarding() {
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [snap, setSnap] = useState('');
-  const [bio, setBio] = useState('');
   const [ig, setIg] = useState('');
   const [tiktok, setTiktok] = useState('');
   const [snapScore, setSnapScore] = useState('');
@@ -110,7 +109,6 @@ export default function Onboarding() {
         id,
         name,
         nickname,
-        bio,
         avatar,
         snapScore: Number.isFinite(score) && score > 0 ? score : undefined,
         socials: {
@@ -180,14 +178,6 @@ export default function Onboarding() {
             onChangeText={setNickname}
             placeholder="Optional"
             autoCapitalize="words"
-          />
-          <Field
-            label="Vibe line"
-            value={bio}
-            onChangeText={setBio}
-            placeholder="One line about you"
-            maxLength={80}
-            autoCapitalize="sentences"
           />
         </View>
 

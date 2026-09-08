@@ -9,7 +9,7 @@ import { Snapcode } from '../components/Snapcode';
 import { TagCode } from '../components/TagCode';
 import { Button, Stat } from '../components/ui';
 import { displayName, encodeTag } from '../lib/payload';
-import { useActiveEvent, useMe, useStats } from '../store/useTagStore';
+import { useAbout, useActiveEvent, useMe, useStats } from '../store/useTagStore';
 import { colors, radius, type } from '../theme';
 
 /** Your own code — the thing you hold up for someone else to scan. */
@@ -25,6 +25,7 @@ export function CodePane({
   const me = useMe();
   const event = useActiveEvent();
   const stats = useStats();
+  const about = useAbout();
   const [copied, setCopied] = useState(false);
   const [showSnapcode, setShowSnapcode] = useState(false);
 
@@ -126,10 +127,15 @@ export function CodePane({
         </View>
       ) : null}
 
-      <View style={{ alignItems: 'center', gap: 4 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open my profile"
+        onPress={() => router.push('/profile')}
+        style={{ alignItems: 'center', gap: 4 }}>
         <Text style={s.name}>{displayName(me)}</Text>
-        {me.bio ? <Text style={s.bio}>{me.bio}</Text> : null}
-      </View>
+        {/* Generated from verified check-ins and real scans — never typed. */}
+        <Text style={s.bio}>{about.line}</Text>
+      </Pressable>
 
       <View style={s.statsRow}>
         <Stat value={stats.people} label="tagged" />

@@ -33,6 +33,7 @@
     "@types/node": "^26.5.0",
     "@types/react": "~19.2.2",
     "supabase": "^2.117.0",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -41,7 +42,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\"",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "db:link": "supabase link --project-ref sqwpgyoosurewekiwipt",
     "db:push": "supabase db push",
     "db:new": "supabase migration new",

@@ -28,9 +28,19 @@ export default function RootLayout() {
               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
             />
             <Stack.Screen name="edit" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
             <Stack.Screen name="leaderboard" options={{ presentation: 'modal' }} />
             <Stack.Screen name="events" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="search" options={{ presentation: 'modal' }} />
             <Stack.Screen name="recap" options={{ presentation: 'modal' }} />
+            <Stack.Screen
+              name="event/[id]"
+              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen name="event/new" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="event/boost" options={{ presentation: 'modal' }} />
+            {/* Full screen, not a sheet: it gets held up at a door. */}
+            <Stack.Screen name="event/door" options={{ animation: 'fade' }} />
           </Stack>
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

@@ -6,8 +6,15 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decodeTag, encodeTag } from '../payload.ts';
-import { pointsForLink, streakAlive, streakFrom, tierFor, totalPoints } from '../swag.ts';
+import { decodeScan, encodeEvent, encodeTag } from '../payload.ts';
+import {
+  pointsForCheckIn,
+  pointsForLink,
+  streakAlive,
+  streakFrom,
+  tierFor,
+  totalPoints,
+} from '../swag.ts';
 import type { LinkEvent, TaggedPerson } from '../../types.ts';
 
 const DAY = 86_400_000;
@@ -32,21 +39,39 @@ const person = (links: LinkEvent[]): TaggedPerson => ({
 
 /* ---- payload ---- */
 
-test('QR payload round-trips, event included', () => {
-  assert.deepEqual(decodeTag(encodeTag('bigsho')), { cardId: 'bigsho', eventId: undefined });
-  assert.deepEqual(decodeTag(encodeTag('bigsho', 'evt_1')), {
+test('a person code round-trips, event included', () => {
+  assert.deepEqual(decodeScan(encodeTag('bigsho')), {
+    kind: 'user',
+    cardId: 'bigsho',
+    eventId: undefined,
+  });
+  assert.deepEqual(decodeScan(encodeTag('bigsho', 'evt_1')), {
+    kind: 'user',
     cardId: 'bigsho',
     eventId: 'evt_1',
   });
 });
 
+test('a door code is read as an event, not a person', () => {
+  // This is the distinction the whole check-in flow rests on: /e/ must never
+  // be swallowed by the bare-id fallback that matches people.
+  assert.deepEqual(decodeScan(encodeEvent('evt_flytime')), {
+    kind: 'event',
+    eventId: 'evt_flytime',
+  });
+  assert.deepEqual(decodeScan('tag://e/evt_flytime'), {
+    kind: 'event',
+    eventId: 'evt_flytime',
+  });
+});
+
 test('accepts deep link and bare id, rejects foreign codes', () => {
-  assert.equal(decodeTag('tag://u/tolu')?.cardId, 'tolu');
-  assert.equal(decodeTag('tag:tolu')?.cardId, 'tolu');
-  assert.equal(decodeTag('tolu')?.cardId, 'tolu');
-  assert.equal(decodeTag('https://instagram.com/tolu'), null);
-  assert.equal(decodeTag('WIFI:S=guest;P=1234;;'), null);
-  assert.equal(decodeTag(''), null);
+  assert.deepEqual(decodeScan('tag://u/tolu'), { kind: 'user', cardId: 'tolu', eventId: undefined });
+  assert.equal(decodeScan('tag:tolu')?.kind, 'user');
+  assert.equal(decodeScan('tolu')?.kind, 'user');
+  assert.equal(decodeScan('https://instagram.com/tolu'), null);
+  assert.equal(decodeScan('WIFI:S=guest;P=1234;;'), null);
+  assert.equal(decodeScan(''), null);
 });
 
 /* ---- streaks ---- */
@@ -88,6 +113,24 @@ test('the event bonus is once per event, not once per person', () => {
   const laterThere = pointsForLink({ existing: undefined, link: l, eventsSeen: ['evt_1'] });
   assert.ok(firstThere.some((a) => a.rule === 'firstAtEvent'));
   assert.ok(!laterThere.some((a) => a.rule === 'firstAtEvent'));
+});
+
+/* ---- check-ins ---- */
+
+test('only a scanned door code earns anything', () => {
+  // The premise of the whole ranking system: typing a code someone read out
+  // over WhatsApp is not evidence you went.
+  const scanned = pointsForCheckIn({ method: 'qr', eventId: 'e1', eventsCheckedIn: [] });
+  const typed = pointsForCheckIn({ method: 'code', eventId: 'e1', eventsCheckedIn: [] });
+  assert.ok(totalPoints(scanned) > 0);
+  assert.equal(totalPoints(typed), 0);
+});
+
+test('a check-in pays once per event, however many times you scan the door', () => {
+  const again = pointsForCheckIn({ method: 'qr', eventId: 'e1', eventsCheckedIn: ['e1'] });
+  assert.equal(totalPoints(again), 0);
+  const elsewhere = pointsForCheckIn({ method: 'qr', eventId: 'e2', eventsCheckedIn: ['e1'] });
+  assert.ok(totalPoints(elsewhere) > 0);
 });
 
 /* ---- tiers ---- */

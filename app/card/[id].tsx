@@ -44,7 +44,7 @@ export default function CardSheet() {
   const untag = useTagStore((s) => s.untag);
   const setActiveEvent = useTagStore((s) => s.setActiveEvent);
   const person = useTagStore((s) => (id ? s.tagged[id] : undefined));
-  const knownEvent = useTagStore((s) => s.events.find((e) => e.id === event));
+  const knownEvent = useTagStore((s) => (event ? s.events[event] : undefined));
 
   const [card, setCard] = useState<Card | null>(person?.card ?? null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>(
@@ -155,7 +155,6 @@ export default function CardSheet() {
               <Text style={s.realName}>{card.name}</Text>
             ) : null}
           </View>
-          {card.bio ? <Text style={s.bio}>{card.bio}</Text> : null}
 
           <View style={s.pills}>
             <TierBadge swag={card.swag} />

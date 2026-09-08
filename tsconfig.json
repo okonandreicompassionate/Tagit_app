@@ -3,5 +3,9 @@
   "compilerOptions": {
     "strict": true
   },
-  "exclude": ["node_modules", "src/**/__tests__/**"]
+  "exclude": [
+    "node_modules",
+    "src/**/__tests__/**",
+    "supabase/functions/**"
+  ]
 }

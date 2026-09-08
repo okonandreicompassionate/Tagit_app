@@ -2,14 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import * as api from '../lib/api';
-import { pointsForLink, streakFrom, totalPoints, type Award } from '../lib/swag';
-import type { Card, LinkEvent, SocialKey, TagEvent, TaggedPerson } from '../types';
+import { deriveAbout, type About } from '../lib/about';
+import * as eventsApi from '../lib/eventsApi';
+import { pointsForCheckIn, pointsForLink, streakFrom, totalPoints, type Award } from '../lib/swag';
+import type {
+  Card,
+  CheckIn,
+  LinkEvent,
+  SocialKey,
+  TagEvent,
+  TaggedPerson,
+} from '../types';
 
 type State = {
   me: Card | null;
   /** Keyed by card id so a re-scan updates in place instead of duplicating. */
   tagged: Record<string, TaggedPerson>;
-  events: TagEvent[];
+  /** Events the user has joined or checked into, keyed by id. */
+  events: Record<string, TagEvent>;
+  /** Proof of presence, keyed by event id — one per event. */
+  checkins: Record<string, CheckIn>;
   activeEventId: string | null;
   /** Points from the most recent scan, held just long enough to animate them. */
   lastAwards: Award[] | null;
@@ -20,7 +32,6 @@ type Actions = {
   createMe: (input: {
     name: string;
     nickname?: string;
-    bio?: string;
     avatar?: string;
     id: string;
     socials: Partial<Record<SocialKey, string>>;
@@ -29,11 +40,14 @@ type Actions = {
   updateMe: (patch: Partial<Omit<Card, 'id' | 'createdAt'>>) => Promise<void>;
   /** Records a scan in both directions and returns what it was worth. */
   tag: (card: Card, direction: LinkEvent['direction']) => Award[];
+  /** Records attendance. `qr` is verified; `code` is not. */
+  checkIn: (event: TagEvent, method: CheckIn['method']) => Award[];
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
   untag: (cardId: string) => void;
-  joinEvent: (code: string) => Promise<TagEvent | null>;
+  joinEventByCode: (code: string) => Promise<TagEvent | null>;
+  rememberEvent: (event: TagEvent) => void;
   setActiveEvent: (eventId: string | null) => void;
   reset: () => void;
 };
@@ -41,7 +55,8 @@ type Actions = {
 const initial: State = {
   me: null,
   tagged: {},
-  events: [],
+  events: {},
+  checkins: {},
   activeEventId: null,
   lastAwards: null,
   hydrated: false,
@@ -57,7 +72,6 @@ export const useTagStore = create<State & Actions>()(
           id: input.id.toLowerCase(),
           name: input.name.trim(),
           nickname: input.nickname?.trim() || undefined,
-          bio: input.bio?.trim() || undefined,
           avatar: input.avatar,
           socials: input.socials,
           snapScore: input.snapScore,
@@ -89,7 +103,7 @@ export const useTagStore = create<State & Actions>()(
         const { me, tagged, events, activeEventId } = get();
         if (card.id === me?.id) return [];
 
-        const event = events.find((e) => e.id === activeEventId);
+        const event = activeEventId ? events[activeEventId] : undefined;
         const link: LinkEvent = {
           at: Date.now(),
           eventId: event?.id,
@@ -139,6 +153,44 @@ export const useTagStore = create<State & Actions>()(
         return awards;
       },
 
+      checkIn: (event, method) => {
+        const { me, checkins, events } = get();
+
+        const awards = pointsForCheckIn({
+          method,
+          eventId: event.id,
+          eventsCheckedIn: Object.values(checkins)
+            .filter((c) => c.method === 'qr')
+            .map((c) => c.eventId),
+        });
+        const gained = totalPoints(awards);
+
+        const previous = checkins[event.id];
+        const record: CheckIn = {
+          eventId: event.id,
+          eventName: event.name,
+          // A typed code never downgrades a scan that already happened.
+          method: previous?.method === 'qr' ? 'qr' : method,
+          at: previous?.at ?? Date.now(),
+          type: event.type,
+          city: event.city,
+        };
+
+        set({
+          checkins: { ...checkins, [event.id]: record },
+          events: { ...events, [event.id]: { ...event, joinedAt: event.joinedAt ?? Date.now() } },
+          // Checking in is the clearest possible signal of where you are, so
+          // it takes over event attribution for subsequent scans.
+          activeEventId: event.id,
+          me: me ? { ...me, swag: me.swag + gained } : me,
+          lastAwards: awards.length ? awards : null,
+        });
+
+        if (me) void eventsApi.recordCheckIn({ cardId: me.id, eventId: event.id, method });
+
+        return awards;
+      },
+
       clearAwards: () => set({ lastAwards: null }),
 
       setNote: (cardId, note) => {
@@ -159,15 +211,16 @@ export const useTagStore = create<State & Actions>()(
         set({ tagged: next });
       },
 
-      joinEvent: async (code) => {
-        const event = await api.joinEventByCode(code);
+      joinEventByCode: async (code) => {
+        const event = await eventsApi.findEventByCode(code);
         if (!event) return null;
-        const existing = get().events.find((e) => e.id === event.id);
-        set({
-          events: existing ? get().events : [...get().events, event],
-          activeEventId: event.id,
-        });
+        // Typing a code is joining, not attending — it earns nothing.
+        get().checkIn(event, 'code');
         return event;
+      },
+
+      rememberEvent: (event) => {
+        set({ events: { ...get().events, [event.id]: event } });
       },
 
       setActiveEvent: (eventId) => set({ activeEventId: eventId }),
@@ -175,13 +228,14 @@ export const useTagStore = create<State & Actions>()(
       reset: () => set({ ...initial, hydrated: true }),
     }),
     {
-      name: 'tag-store-v1',
+      name: 'tag-store-v2',
       storage: createJSONStorage(() => AsyncStorage),
       // `hydrated` and `lastAwards` are session state, never persisted.
-      partialize: ({ me, tagged, events, activeEventId }) => ({
+      partialize: ({ me, tagged, events, checkins, activeEventId }) => ({
         me,
         tagged,
         events,
+        checkins,
         activeEventId,
       }),
       onRehydrateStorage: () => (state, error) => {
@@ -208,14 +262,34 @@ export const lastLink = (p: TaggedPerson) =>
 export const useActiveEvent = (): TagEvent | null => {
   const id = useTagStore((s) => s.activeEventId);
   const events = useTagStore((s) => s.events);
-  return events.find((e) => e.id === id) ?? null;
+  return id ? events[id] ?? null : null;
 };
+
+export const useJoinedEvents = (): TagEvent[] => {
+  const events = useTagStore((s) => s.events);
+  return Object.values(events).sort((a, b) => (b.joinedAt ?? 0) - (a.joinedAt ?? 0));
+};
+
+export const useCheckIns = (): CheckIn[] => {
+  const checkins = useTagStore((s) => s.checkins);
+  return Object.values(checkins).sort((a, b) => b.at - a.at);
+};
+
+/** The auto-generated profile. Nothing here is typed by the user. */
+export function useAbout(): About {
+  const checkins = useTagStore((s) => s.checkins);
+  const tagged = useTagStore((s) => s.tagged);
+  return deriveAbout({
+    checkins: Object.values(checkins),
+    people: Object.values(tagged),
+  });
+}
 
 /** Everything the recap card needs, derived rather than stored. */
 export function useStats() {
   const tagged = useTagStore((s) => s.tagged);
   const me = useTagStore((s) => s.me);
-  const events = useTagStore((s) => s.events);
+  const checkins = useTagStore((s) => s.checkins);
 
   const people = Object.values(tagged);
   const byEvent = new Map<string, number>();
@@ -225,6 +299,7 @@ export function useStats() {
     }
   }
   const topEvent = [...byEvent.entries()].sort((a, b) => b[1] - a[1])[0];
+  const verified = Object.values(checkins).filter((c) => c.method === 'qr');
 
   return {
     swag: me?.swag ?? 0,
@@ -232,7 +307,7 @@ export function useStats() {
     scans: people.reduce((n, p) => n + p.links.length, 0),
     longestStreak: people.reduce((n, p) => Math.max(n, p.streak), 0),
     addedOnSnap: people.filter((p) => p.addedOnSnap).length,
-    events: events.length,
+    events: verified.length,
     topEvent: topEvent ? { name: topEvent[0], tags: topEvent[1] } : null,
   };
 }
