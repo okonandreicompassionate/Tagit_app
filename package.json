@@ -16,6 +16,7 @@
     "expo-sharing": "~57.0.18",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.3",
+    "expo-updates": "~57.0.21",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
