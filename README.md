@@ -40,16 +40,23 @@ app/                     screens (expo-router, file = route)
   card/[id].tsx          the post-scan sheet — "Add on Snap" lives here
   u/[id].tsx             deep link: tagit://u/:id and tagit.app/u/:id
   onboarding.tsx         card builder, first run
-  edit.tsx  events.tsx  leaderboard.tsx  recap.tsx
+  signin.tsx             phone or email OTP — and account recovery
+  feed.tsx               full-screen vertical event feed
+  event/[id] new door boost      host, check in, print a door code, buy reach
+  edit.tsx  events.tsx  leaderboard.tsx  recap.tsx  profile.tsx  search.tsx
 src/panes/               the three panes of the home screen
   ScannerPane            camera + QR reticle (the default view)
-  TaggedPane             who you've met, searchable, "not added" filter
+  TaggedPane             Recent + Friends tabs, searchable
   CodePane               your own Snapcode-style tile
 src/lib/
   swag.ts                points, tiers, streaks — the whole game
   payload.ts             what goes in the QR, and how it's parsed
   socials.ts             deep links into Snap/IG/TikTok/X/WhatsApp
-  api.ts                 the backend, or the mock when there isn't one
+  api.ts                 cards, links, leaderboards
+  eventsApi.ts           events, check-ins, discovery, artwork, boosts
+  auth.ts  account.ts    sign-in, and claiming the card you already own
+  friends.ts             the mutual list a scan creates
+  nfc.ts  ndef.ts        tap a sticker instead of scanning
 src/store/useTagStore.ts local-first state, persisted to AsyncStorage
 supabase/migrations/     Postgres schema, RLS, leaderboard views
 docs/API.md              the four endpoints, and how to sell them later
@@ -118,35 +125,53 @@ npm run db:new add_something    # writes a timestamped file
 npm run db:push
 ```
 
-Both existing migrations are idempotent, because this project's schema was
-first applied by hand before migrations existed. Pushing against a database
-that already has it is a no-op rather than an error.
+Every migration is idempotent, because this project's schema was first applied
+by hand before migrations existed. Pushing against a database that already has
+it is a no-op rather than an error.
+
+Two hard-won rules live in that folder:
+
+- **No expression indexes.** `(created_at::date)` on a timestamptz is STABLE,
+  not IMMUTABLE, and Postgres may refuse it. The scan day is a plain column
+  filled by a trigger instead.
+- **Column grants can't subtract from a table grant.** To stop a client writing
+  `swag` or paid placement, the table-level grant is revoked and only the
+  allowed columns granted back — so a column added later is unwritable by
+  default.
 
 That's it — `src/lib/api.ts` flips from the mock to live automatically
 (`isLive`), and the card builder shows which mode you're in.
 
-The schema does three things worth knowing about: `cards.swag` is not
-client-writable (a trigger recomputes it from the link ledger, and the column
-is revoked from the client role), a unique index caps scoring at one row per
-pair per day, and the leaderboard views deliberately run as their owner so the
-raw `links` graph stays private while the aggregates are public.
+Worth knowing about the schema: `cards.swag` is server-owned (triggers
+recompute it from the link and check-in ledgers), a unique index caps scoring
+at one row per pair per direction per day, and the leaderboard views run as
+their owner so the raw `links` graph stays private while the aggregates are
+public.
 
 ## Known gaps
 
 - **Points are still calculated client-side.** The ledger and the daily cap are
   enforced in Postgres, but a determined user could post inflated `points` for
   a real scan. Moving pricing into a Postgres function is the first thing to do
-  before any leaderboard has a prize attached. See `docs/API.md`.
-- **Auth is wired but not enforced.** Every install signs in anonymously
-  (`src/lib/supabase.ts`) and stamps its uid as the card's `owner`. The RLS
-  policies still allow editing an *unclaimed* card, though, so until anonymous
-  sign-in is enabled in the dashboard and confirmed working on a device, a card
-  with `owner = null` can still be overwritten by anyone. Tightening the policy
-  to `with check (owner = auth.uid())` is a one-line migration — but it must
-  come *after* auth is verified, or it locks everyone out of their own card.
-- **`tagit.app` doesn't exist.** Register it (or change `TAG_HOST` in
-  `src/lib/payload.ts`) and put a web card behind `/u/:handle`.
-- **No "they scanned me" path.** The `scanned_by` direction is modelled and
-  scored, but nothing writes it yet — that needs the backend to push to the
-  person who was scanned.
-"# Tagit_app" 
+  before any leaderboard has a prize attached. See [docs/API.md](docs/API.md).
+- **`tagit.app` doesn't exist.** Register it, or set `EXPO_PUBLIC_TAG_HOST`.
+  Until then universal links don't open the app, and the best NFC trick — a
+  Tagit card that works for someone who has never installed it — can't work.
+- **Snapchat Login Kit isn't wired.** Sign-in takes a phone number or an email;
+  "Continue with Snapchat" needs an app registered with Snap and review before
+  production, so it can't be the only route in. Worth filing early.
+- **Check-ins have no location.** We trust that the door code was scanned at the
+  door. Someone could photograph it and share it in a group chat. Geofencing
+  would close that, at the cost of a location permission.
+- **Snap adds aren't measured.** `addedOnSnap` is local to each phone and never
+  syncs, so the app's core conversion — did the scan become a Snap friendship —
+  is invisible. See [docs/ADMIN.md](docs/ADMIN.md).
+
+## Where the docs are
+
+| | |
+|---|---|
+| [DEMO.md](DEMO.md) | Getting it onto phones without paying Apple |
+| [docs/API.md](docs/API.md) | The endpoints, and how to sell them later |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What's next, with dependencies mapped |
+| [docs/ADMIN.md](docs/ADMIN.md) | Admin dashboard plan (not built) |
