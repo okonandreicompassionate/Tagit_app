@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersonRow } from '../components/PersonRow';
 import { Avatar, Button, Empty, Pill } from '../components/ui';
 import { acceptFriend, listFriends, type Friend } from '../lib/friends';
+import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { displayName } from '../lib/payload';
 import { isLive } from '../lib/rest';
 import { streakAlive } from '../lib/swag';
@@ -180,7 +181,7 @@ export function TaggedPane({
             renderItem={({ item }) => (
               <PersonRow person={item} onPress={() => onOpenPerson(item.card.id)} />
             )}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 70, paddingHorizontal: 4 }}
+            contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 16, paddingHorizontal: 4 }}
             keyboardShouldPersistTaps="handled"
             removeClippedSubviews={!active}
             ListEmptyComponent={
@@ -188,7 +189,7 @@ export function TaggedPane({
                 <Pressable onPress={onBackToCamera} accessibilityRole="button">
                   <Empty
                     title="Nobody scanned yet"
-                    body="Swipe back to the camera and scan someone's code. Tap here to go straight there."
+                    body="Tap Scan below and point it at someone's code. Tap here to go straight there."
                   />
                 </Pressable>
               ) : (
@@ -201,7 +202,7 @@ export function TaggedPane({
         <FlatList<Friend>
           data={[...requests, ...accepted, ...sent]}
           keyExtractor={(f) => f.card.id}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 70, paddingHorizontal: 16 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 16, paddingHorizontal: 16 }}
           keyboardShouldPersistTaps="handled"
           refreshing={false}
           onRefresh={() => void loadFriends()}

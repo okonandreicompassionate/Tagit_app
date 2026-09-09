@@ -8,6 +8,7 @@ import { ScannerPane } from '../src/panes/ScannerPane';
 import { TaggedPane } from '../src/panes/TaggedPane';
 import { myCard } from '../src/lib/account';
 import { currentUserId } from '../src/lib/auth';
+import { TAB_BAR_HEIGHT } from '../src/lib/layout';
 import { isLive } from '../src/lib/rest';
 import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors } from '../src/theme';
@@ -28,6 +29,7 @@ export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const adoptCard = useTagStore((s) => s.adoptCard);
+  const syncTagged = useTagStore((s) => s.syncTagged);
   // null = still checking. Rendering the app before this resolves would flash
   // onboarding at someone who is already signed in.
   const [signedIn, setSignedIn] = useState<boolean | null>(isLive ? null : false);
@@ -51,14 +53,20 @@ export default function Home() {
           if (alive && card) adoptCard(card);
         } catch {
           // Offline. Onboarding still resolves the handle as "yours".
+          return;
         }
       }
+
+      // Every open, not just the first: a scan that landed while this phone
+      // was closed or offline only ever reaches the server, never this
+      // device's local store, until something asks for it.
+      if (alive) void syncTagged();
     })();
 
     return () => {
       alive = false;
     };
-  }, [me, adoptCard]);
+  }, [me, adoptCard, syncTagged]);
 
   // Hooks first, then the gates.
   if (signedIn === null) {
@@ -87,7 +95,7 @@ export default function Home() {
         <CodePane active={tab === CODE} onBackToCamera={() => setTab(CAMERA)} />
       </View>
 
-      <View style={[s.bar, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[s.bar, { paddingBottom: insets.bottom + 16 }]}>
         <TabButton
           label="Tagged"
           active={tab === TAGGED}
@@ -140,10 +148,11 @@ function TabButton({
 // Plain line icons, no glyphs — kept to one weight and one size so the bar
 // reads as a single quiet object rather than three different ideas.
 const STROKE = 1.7;
+const ICON_SIZE = 25;
 
 function PeopleIcon({ color }: { color: string }) {
   return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
       <Circle cx="9" cy="8.5" r="3.2" stroke={color} strokeWidth={STROKE} />
       <Circle cx="16" cy="10" r="2.6" stroke={color} strokeWidth={STROKE} />
       <Rect
@@ -162,7 +171,7 @@ function PeopleIcon({ color }: { color: string }) {
 
 function ScanIcon({ color }: { color: string }) {
   return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
       <Rect x="3.5" y="6.5" width="17" height="12" rx="3" stroke={color} strokeWidth={STROKE} />
       <Circle cx="12" cy="12.5" r="3.4" stroke={color} strokeWidth={STROKE} />
       <Rect x="9" y="4.4" width="6" height="2.6" rx="1" fill={color} />
@@ -172,7 +181,7 @@ function ScanIcon({ color }: { color: string }) {
 
 function CodeIcon({ color }: { color: string }) {
   return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
       <Rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
       <Rect x="14" y="3.5" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
       <Rect x="3.5" y="14" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
@@ -190,11 +199,12 @@ const s = StyleSheet.create({
     right: 0,
     bottom: 0,
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    minHeight: TAB_BAR_HEIGHT,
+    backgroundColor: 'rgba(0,0,0,0.78)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    paddingTop: 10,
+    paddingTop: 14,
   },
-  tab: { flex: 1, alignItems: 'center', gap: 4 },
-  tabLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.2 },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 44 },
+  tabLabel: { fontSize: 11.5, fontWeight: '700', letterSpacing: 0.2 },
 });

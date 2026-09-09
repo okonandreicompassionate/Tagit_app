@@ -49,6 +49,39 @@ export async function getCard(cardId: string): Promise<Card | null> {
   return rows[0] ? toCard(rows[0]) : null;
 }
 
+/** Batch of `getCard`, for hydrating a whole Tagged list in one request. */
+export async function getCards(ids: string[]): Promise<Card[]> {
+  if (!ids.length) return [];
+  if (!isLive) {
+    return ids.map((id) => findMockCard(id)).filter((c): c is Card => Boolean(c));
+  }
+  const rows = await rest<CardRow[]>(
+    `cards?id=in.(${ids.map(esc).join(',')})&select=${SELECT}`
+  );
+  return rows.map(toCard);
+}
+
+type LinkRow = {
+  to_card: string;
+  event_id: string | null;
+  direction: 'scanned' | 'scanned_by';
+  created_at: string;
+};
+
+/**
+ * Every person this card has ever met, straight from the ledger — not just
+ * whichever of them happened to arrive over Realtime while a phone was open
+ * and connected. `mirror_link()` guarantees a `from_card = cardId` row
+ * exists on both sides of a scan, whoever initiated it, so this one query
+ * is the complete list either way.
+ */
+export async function myLinks(cardId: string): Promise<LinkRow[]> {
+  if (!isLive) return [];
+  return rest<LinkRow[]>(
+    `links?select=to_card,event_id,direction,created_at&from_card=eq.${esc(cardId)}&order=created_at.asc`
+  );
+}
+
 export async function saveCard(card: Card): Promise<Card> {
   if (!isLive) return card;
 

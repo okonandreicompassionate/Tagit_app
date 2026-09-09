@@ -8,6 +8,7 @@ import { TierProgress } from '../components/Badges';
 import { Snapcode } from '../components/Snapcode';
 import { TagCode } from '../components/TagCode';
 import { Button, Stat } from '../components/ui';
+import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { displayName, encodeTag } from '../lib/payload';
 import { useAbout, useActiveEvent, useMe, useStats } from '../store/useTagStore';
 import { colors, radius, type } from '../theme';
@@ -85,7 +86,7 @@ export function CodePane({
       style={s.root}
       contentContainerStyle={[
         s.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 80 },
+        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 20 },
       ]}
       showsVerticalScrollIndicator={false}>
       <View style={s.header}>

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { MOCK_CARDS } from '../lib/mock';
 import { cancelNfc, isNfcAvailable, readTagUrl } from '../lib/nfc';
 import { decodeScan } from '../lib/payload';
@@ -64,7 +65,7 @@ export function ScannerPane({
     };
   }, []);
 
-  // Never leave the torch burning on a pane the user has swiped away from —
+  // Never leave the torch burning on a tab the user has switched away from —
   // it drains the battery and heats the phone with nothing on screen.
   useEffect(() => {
     if (!active && torch) setTorch(false);
@@ -151,8 +152,7 @@ export function ScannerPane({
         />
       ) : null}
 
-      {/* Tap target for the double-tap flip. Sits under the control bars, and
-          responds only to taps that don't move, so the pager still swipes. */}
+      {/* Tap target for the double-tap flip. Sits under the control bars. */}
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={onViewfinderTap}
@@ -212,7 +212,9 @@ export function ScannerPane({
         </Pressable>
       ) : null}
 
-      <View style={[s.bottom, { paddingBottom: insets.bottom + 44 }]}>
+      {/* Clears the app's own bottom tab bar, which floats over this pane —
+          "My code" lives there now, so this row is just camera controls. */}
+      <View style={[s.bottom, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 14 }]}>
         {__DEV__ ? (
           <Pressable
             accessibilityRole="button"
@@ -223,8 +225,7 @@ export function ScannerPane({
         ) : null}
 
         <View style={s.bottomRow}>
-          {/* Bottom-left, under the thumb: these rooms are dark and the torch
-              gets reached for constantly. */}
+          {/* These rooms are dark and the torch gets reached for constantly. */}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}
@@ -237,13 +238,6 @@ export function ScannerPane({
               facing === 'front' && { opacity: 0.35 },
             ]}>
             <Text style={s.icon}>{torch ? '🔆' : '🔅'}</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Show my code"
-            onPress={onOpenCode}
-            style={s.myCodeBtn}>
-            <Text style={s.myCodeText}>My code</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -310,16 +304,7 @@ const s = StyleSheet.create({
   icon: { fontSize: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   bottom: { position: 'absolute', bottom: 0, left: 0, right: 0, gap: 12, paddingHorizontal: 16 },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  myCodeBtn: {
-    height: 52,
-    paddingHorizontal: 30,
-    borderRadius: radius.pill,
-    backgroundColor: colors.snap,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  myCodeText: { color: colors.snapInk, fontSize: 16, fontWeight: '900' },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28 },
   devBtn: {
     alignSelf: 'center',
     paddingHorizontal: 12,

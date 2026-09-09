@@ -47,13 +47,24 @@ type Actions = {
    * priced by the database trigger, so this only mirrors it locally — it must
    * not award anything a second time.
    */
-  receiveLink: (card: Card, meta: { eventId?: string; eventName?: string; at: number }) => void;
+  receiveLink: (
+    card: Card,
+    meta: { eventId?: string; eventName?: string; at: number; direction?: LinkEvent['direction'] }
+  ) => void;
   /**
    * Restores a card fetched from the server after signing in. This is what
    * "log back in" does — it replaces whatever is on this phone with the
    * account's real card, rather than starting a second one.
    */
   adoptCard: (card: Card) => void;
+  /**
+   * Rebuilds Tagged from the server ledger. `receiveLink` only ever hears
+   * about a scan that happens to arrive over Realtime while this phone is
+   * open and connected — anything that happened while it wasn't (closed,
+   * offline, a fresh install) never reaches the local store any other way.
+   * Call this on every app open, not just the first one.
+   */
+  syncTagged: () => Promise<void>;
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
@@ -215,7 +226,7 @@ export const useTagStore = create<State & Actions>()(
           at: meta.at,
           eventId: meta.eventId,
           eventName: meta.eventName,
-          direction: 'scanned_by',
+          direction: meta.direction ?? 'scanned_by',
         };
         const links = [...(existing?.links ?? []), link];
 
@@ -234,6 +245,35 @@ export const useTagStore = create<State & Actions>()(
       },
 
       adoptCard: (card) => set({ me: card }),
+
+      syncTagged: async () => {
+        const me = get().me;
+        if (!me) return;
+        try {
+          const rows = await api.myLinks(me.id);
+          if (!rows.length) return;
+
+          const ids = [...new Set(rows.map((r) => r.to_card))];
+          const cards = await api.getCards(ids);
+          const byId = new Map(cards.map((c) => [c.id, c]));
+
+          // Reuses receiveLink's own merge and dedupe rather than a wholesale
+          // overwrite, so a scan this device already knows about from a live
+          // Realtime event doesn't get double-counted when the ledger is
+          // fetched again on top of it.
+          for (const row of rows) {
+            const card = byId.get(row.to_card);
+            if (!card) continue; // the card was since deleted
+            get().receiveLink(card, {
+              eventId: row.event_id ?? undefined,
+              at: new Date(row.created_at).getTime(),
+              direction: row.direction,
+            });
+          }
+        } catch (err) {
+          if (__DEV__) console.warn('[store] syncTagged failed:', err);
+        }
+      },
 
       clearAwards: () => set({ lastAwards: null }),
 
