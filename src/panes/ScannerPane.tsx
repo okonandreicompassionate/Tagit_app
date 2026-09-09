@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { MOCK_CARDS } from '../lib/mock';
 import { cancelNfc, isNfcAvailable, readTagUrl } from '../lib/nfc';
@@ -179,12 +180,15 @@ export function ScannerPane({
           </Text>
         </Pressable>
 
+        {/* The one nav element worth naming rather than iconing — it's the
+            easiest-to-miss screen in the app otherwise. */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Browse events"
+          accessibilityLabel="Browse the events feed"
           onPress={() => router.push('/feed')}
-          style={s.iconBtn}>
-          <Text style={s.icon}>🎟️</Text>
+          style={s.feedBtn}>
+          <TicketIcon color={colors.snapInk} />
+          <Text style={s.feedText}>Feed</Text>
         </Pressable>
 
         <Pressable
@@ -252,6 +256,20 @@ export function ScannerPane({
   );
 }
 
+function TicketIcon({ color }: { color: string }) {
+  return (
+    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1.3a1.7 1.7 0 0 0 0 3.4V15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.3a1.7 1.7 0 0 0 0-3.4V9Z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinejoin="round"
+      />
+      <Path d="M14 7.5v9" stroke={color} strokeWidth={1.7} strokeDasharray="2.4 2.4" />
+    </Svg>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   gate: { paddingHorizontal: 32, gap: 14, alignItems: 'stretch' },
@@ -280,6 +298,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
   },
   eventText: { color: colors.snap, fontSize: 12, fontWeight: '800' },
+  feedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.snap,
+  },
+  feedText: { color: colors.snapInk, fontSize: 13, fontWeight: '800' },
   iconBtn: {
     width: 40,
     height: 40,

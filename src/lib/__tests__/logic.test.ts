@@ -107,6 +107,17 @@ test('keeping a streak alive pays, re-scanning the same day does not', () => {
   assert.ok(newDay.some((a) => a.rule === 'streakKept'));
 });
 
+test('a second scan of the same person on the same day pays nothing at all', () => {
+  // Not just the streak bonus — repeatLink, scannedByYou, firstAtEvent too.
+  // Re-scanning a friend all night shouldn't be a points farm.
+  const again = pointsForLink({
+    existing: person([link(0)]),
+    link: link(0, { direction: 'scanned', eventId: 'evt_1', eventName: 'Flytime' }),
+    eventsSeen: [],
+  });
+  assert.deepStrictEqual(again, []);
+});
+
 test('the event bonus is once per event, not once per person', () => {
   const l = link(0, { eventId: 'evt_1', eventName: 'Flytime' });
   const firstThere = pointsForLink({ existing: undefined, link: l, eventsSeen: [] });

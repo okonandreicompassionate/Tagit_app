@@ -1,4 +1,4 @@
-import type { LinkEvent, TaggedPerson } from '../types';
+import type { LinkEvent, TagEvent, TaggedPerson } from '../types';
 
 /** Points are awarded once per rule per link — see `pointsForLink`. */
 export const POINTS = {
@@ -90,6 +90,13 @@ export function pointsForLink(args: {
   eventsSeen: string[];
 }): Award[] {
   const { existing, link, eventsSeen } = args;
+
+  // A second scan of the same person on the same day is real — you did run
+  // into them again — but it's worth nothing. Otherwise re-scanning a friend
+  // ten times at one party is free points, which is exactly the spam this
+  // exists to not pay for.
+  if (existing?.links.some((l) => dayOf(l.at) === dayOf(link.at))) return [];
+
   const awards: Award[] = [];
 
   if (!existing) {
@@ -116,6 +123,30 @@ export function pointsForLink(args: {
   }
 
   return awards;
+}
+
+const CHECKIN_EARLY_WINDOW_HOURS = 2;
+
+export type CheckInEligibility =
+  | { ok: true }
+  | { ok: false; reason: 'too-early'; opensAt: number }
+  | { ok: false; reason: 'too-late' };
+
+/**
+ * Whether a verified (QR) check-in is allowed right now. Mirrors the
+ * database's own `checkins_insert` policy exactly — see
+ * `supabase/migrations/*_checkin_window.sql` — so a "not yet" shown here and
+ * what the server actually enforces never disagree. An event with no start
+ * time is always open, same exemption discovery already gives one; typed
+ * codes aren't gated at all, since they never claimed attendance to begin
+ * with.
+ */
+export function checkInEligibility(event: TagEvent, now = Date.now()): CheckInEligibility {
+  if (!event.startsAt) return { ok: true };
+  const opensAt = event.startsAt - CHECKIN_EARLY_WINDOW_HOURS * 3_600_000;
+  if (now < opensAt) return { ok: false, reason: 'too-early', opensAt };
+  if (event.endsAt && now > event.endsAt) return { ok: false, reason: 'too-late' };
+  return { ok: true };
 }
 
 /**

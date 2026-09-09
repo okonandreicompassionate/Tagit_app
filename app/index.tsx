@@ -9,6 +9,7 @@ import { TaggedPane } from '../src/panes/TaggedPane';
 import { myCard } from '../src/lib/account';
 import * as api from '../src/lib/api';
 import { currentUserId } from '../src/lib/auth';
+import { getEvent } from '../src/lib/eventsApi';
 import { TAB_BAR_HEIGHT } from '../src/lib/layout';
 import { isLive } from '../src/lib/rest';
 import { useMe, useTagStore } from '../src/store/useTagStore';
@@ -35,6 +36,8 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const adoptCard = useTagStore((s) => s.adoptCard);
   const syncTagged = useTagStore((s) => s.syncTagged);
+  const activeEventId = useTagStore((s) => s.activeEventId);
+  const setActiveEvent = useTagStore((s) => s.setActiveEvent);
   // null = still checking. Rendering the app before this resolves would flash
   // onboarding at someone who is already signed in.
   const [signedIn, setSignedIn] = useState<boolean | null>(isLive ? null : false);
@@ -84,6 +87,20 @@ export default function Home() {
         }
       }
 
+      // The "scanning at X" chip on the camera reads activeEventId straight
+      // from local state, which is never invalidated on its own — an event
+      // that was deleted, or one whose creation silently failed server-side
+      // (same local-first gap as the card above), sticks there forever.
+      // Confirmed against the server on open; cleared if it's gone.
+      if (alive && activeEventId) {
+        try {
+          const stillExists = await getEvent(activeEventId);
+          if (alive && !stillExists) setActiveEvent(null);
+        } catch {
+          // Offline — leave it; not evidence the event is actually gone.
+        }
+      }
+
       // Every open, not just the first: a scan that landed while this phone
       // was closed or offline only ever reaches the server, never this
       // device's local store, until something asks for it. If one of those
@@ -103,7 +120,7 @@ export default function Home() {
     return () => {
       alive = false;
     };
-  }, [me, adoptCard, syncTagged, router]);
+  }, [me, adoptCard, syncTagged, router, activeEventId, setActiveEvent]);
 
   // Hooks first, then the gates.
   if (signedIn === null) {

@@ -16,7 +16,7 @@ import { SwagToast } from '../../src/components/SwagToast';
 import { Button, Empty, Pill, Stat } from '../../src/components/ui';
 import { deleteEvent, getEvent } from '../../src/lib/eventsApi';
 import { encodeEvent } from '../../src/lib/payload';
-import type { Award } from '../../src/lib/swag';
+import { checkInEligibility, type Award } from '../../src/lib/swag';
 import { useTagStore } from '../../src/store/useTagStore';
 import { colors, radius, type } from '../../src/theme';
 import { EVENT_TYPE_LABELS, type TagEvent } from '../../src/types';
@@ -67,8 +67,18 @@ export default function EventScreen() {
         // events list never fakes attendance.
         if (checkin === '1' && !checkedIn.current) {
           checkedIn.current = true;
-          const earned = checkIn(found, 'qr');
-          if (earned.length) setAwards(earned);
+          const eligible = checkInEligibility(found);
+          if (eligible.ok) {
+            const earned = checkIn(found, 'qr');
+            if (earned.length) setAwards(earned);
+          } else if (eligible.reason === 'too-early') {
+            Alert.alert(
+              "Check-in isn't open yet",
+              `Come back closer to the event — check-in opens ${formatWhen(eligible.opensAt)}.`
+            );
+          } else {
+            Alert.alert('Check-in has closed', "This event's scan window has ended.");
+          }
         }
       } catch {
         if (!cancelled) setState('missing');

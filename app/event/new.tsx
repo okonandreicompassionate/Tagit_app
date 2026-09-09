@@ -32,6 +32,13 @@ const PRESETS = [
   { label: 'This weekend', at: () => nextWeekend() },
 ] as const;
 
+/** Hours after the start time that the door code stops accepting scans. */
+const CUTOFF_PRESETS = [
+  { label: '4 hours', hours: 4 },
+  { label: '8 hours', hours: 8 },
+  { label: '24 hours', hours: 24 },
+] as const;
+
 function atHour(daysAhead: number, hour: number) {
   const d = new Date(Date.now() + daysAhead * DAY);
   d.setHours(hour, 0, 0, 0);
@@ -58,6 +65,7 @@ export default function NewEvent() {
   const [city, setCity] = useState('');
   const [ticketUrl, setTicketUrl] = useState('');
   const [startsAt, setStartsAt] = useState<number | undefined>(atHour(0, 21));
+  const [endsAt, setEndsAt] = useState<number | undefined>(undefined);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +110,7 @@ export default function NewEvent() {
           location,
           city,
           startsAt,
+          endsAt,
           ticketUrl: ticketUrl.trim() || undefined,
           visibility,
         },
@@ -278,6 +287,39 @@ export default function NewEvent() {
               </Text>
             ) : null}
           </View>
+
+          {startsAt ? (
+            <View style={{ gap: 8 }}>
+              <Text style={s.label}>SCAN CUTOFF</Text>
+              <View style={s.chips}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: endsAt === undefined }}
+                  onPress={() => setEndsAt(undefined)}
+                  style={[s.chip, endsAt === undefined && s.chipOn]}>
+                  <Text style={[s.chipText, endsAt === undefined && s.chipTextOn]}>No cutoff</Text>
+                </Pressable>
+                {CUTOFF_PRESETS.map((p) => {
+                  const value = startsAt + p.hours * 3_600_000;
+                  const on = endsAt === value;
+                  return (
+                    <Pressable
+                      key={p.label}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => setEndsAt(value)}
+                      style={[s.chip, on && s.chipOn]}>
+                      <Text style={[s.chipText, on && s.chipTextOn]}>{p.label} after start</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={s.hint}>
+                After this, the door code stops counting as check-in — keeps the guest list honest
+                once the night's over. Doesn't affect people just browsing the event.
+              </Text>
+            </View>
+          ) : null}
 
           <Field
             label="Where"
