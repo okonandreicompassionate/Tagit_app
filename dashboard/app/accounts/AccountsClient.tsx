@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { usePolling } from '@/lib/usePolling';
 import { Card, ErrorBanner, Pill, SectionTitle, StatTile, relativeTime } from '@/lib/ui';
@@ -15,8 +16,44 @@ export function AccountsClient() {
   // Local overlay so a delete disappears immediately rather than waiting for
   // the next 30s poll to notice it's gone.
   const [removed, setRemoved] = useState<Set<string>>(new Set());
+  // Same idea in reverse: a freshly created card shows up right away instead
+  // of waiting on the next poll.
+  const [added, setAdded] = useState<AccountRow[]>([]);
 
-  const accounts = (data?.accounts ?? []).filter((a) => !removed.has(a.id));
+  const [showAdd, setShowAdd] = useState(false);
+  const [newId, setNewId] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newSnap, setNewSnap] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const accounts = [...added, ...(data?.accounts ?? [])].filter((a) => !removed.has(a.id));
+
+  const create = async () => {
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const res = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: newId, name: newName, snap: newSnap }),
+      });
+      const body = await res.json();
+      if (!res.ok || body.error) {
+        setCreateError(body.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setAdded((prev) => [body.account as AccountRow, ...prev]);
+      setNewId('');
+      setNewName('');
+      setNewSnap('');
+      setShowAdd(false);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,12 +119,72 @@ export function AccountsClient() {
           Accounts
         </SectionTitle>
 
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by handle or name…"
-          className="mb-4 w-full rounded-xl border border-edge bg-surface px-4 py-2.5 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none sm:w-80"
-        />
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by handle or name…"
+            className="w-full rounded-xl border border-edge bg-surface px-4 py-2.5 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none sm:w-80"
+          />
+          <button
+            onClick={() => setShowAdd((v) => !v)}
+            className="rounded-full bg-snap px-4 py-2.5 text-[13px] font-bold text-black transition hover:brightness-95"
+          >
+            {showAdd ? 'Cancel' : '+ Add a test account'}
+          </button>
+        </div>
+
+        {showAdd ? (
+          <Card className="mb-5 p-5">
+            <p className="mb-4 text-[12.5px] text-dim">
+              Seeds a card directly — no phone, no email. Unclaimed, same as a demo card, until
+              someone actually signs into it from the app.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-faint">
+                  Handle
+                </label>
+                <input
+                  value={newId}
+                  onChange={(e) => setNewId(e.target.value)}
+                  placeholder="testuser1"
+                  className="w-full rounded-lg border border-edge bg-surfhi px-3 py-2 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-faint">
+                  Name
+                </label>
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Test User"
+                  className="w-full rounded-lg border border-edge bg-surfhi px-3 py-2 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-faint">
+                  Snap handle (optional)
+                </label>
+                <input
+                  value={newSnap}
+                  onChange={(e) => setNewSnap(e.target.value)}
+                  placeholder="handle"
+                  className="w-full rounded-lg border border-edge bg-surfhi px-3 py-2 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none"
+                />
+              </div>
+            </div>
+            {createError ? <p className="mt-3 text-[12.5px] text-flame">{createError}</p> : null}
+            <button
+              onClick={() => void create()}
+              disabled={creating || newId.trim().length < 2 || newName.trim().length < 2}
+              className="mt-4 rounded-full bg-snap px-4 py-2 text-[13px] font-bold text-black disabled:opacity-40"
+            >
+              {creating ? 'Creating…' : 'Create card'}
+            </button>
+          </Card>
+        ) : null}
 
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse text-left text-[13.5px]">
@@ -106,7 +203,11 @@ export function AccountsClient() {
             <tbody>
               {filtered.map((a) => (
                 <tr key={a.id} className="border-b border-edge/60 last:border-0 align-top">
-                  <td className="px-4 py-3 text-snap">@{a.id}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/accounts/${encodeURIComponent(a.id)}`} className="text-snap hover:underline">
+                      @{a.id}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 font-semibold">{a.nickname || a.name}</td>
                   <td className="px-4 py-3">
                     <Pill tone={a.owner ? 'good' : 'default'}>{a.owner ? 'Signed in' : 'Unclaimed'}</Pill>

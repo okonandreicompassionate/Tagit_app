@@ -62,3 +62,55 @@ export async function GET() {
     );
   }
 }
+
+const HANDLE_RE = /^[a-z0-9_.-]{2,40}$/;
+
+/**
+ * Seeds a card directly — no phone, no email, no auth at all, same shape as
+ * the demo cards already in the table (`owner` stays null until someone
+ * actually signs into it from the app). For testing flows that need a second
+ * or third real card to scan without roping in another real phone.
+ */
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const id = String(body.id ?? '').trim().toLowerCase();
+    const name = String(body.name ?? '').trim();
+    const snap = typeof body.snap === 'string' ? body.snap.trim().replace(/^@+/, '') : '';
+
+    if (!HANDLE_RE.test(id)) {
+      return NextResponse.json(
+        { error: 'Handle must be 2–40 characters: lowercase letters, numbers, _ . -' },
+        { status: 400 }
+      );
+    }
+    if (name.length < 2 || name.length > 60) {
+      return NextResponse.json({ error: 'Name must be 2–60 characters.' }, { status: 400 });
+    }
+
+    const db = supabaseAdmin();
+    // Same "no generated Database type" gap as the .returns<T[]>() calls
+    // above, on the write side instead — without it, insert()'s payload type
+    // resolves to `never` rather than accepting an arbitrary row.
+    const { data, error } = await db
+      .from('cards')
+      .insert({ id, name, socials: snap ? { snap } : {} } as never)
+      .select('id,name,nickname,avatar,socials,swag,owner,created_at')
+      .single<CardRow>();
+
+    if (error) {
+      const taken = error.code === '23505';
+      return NextResponse.json(
+        { error: taken ? `@${id} is already taken.` : error.message },
+        { status: taken ? 409 : 502 }
+      );
+    }
+
+    return NextResponse.json({ account: { ...data, links: 0, checkins: 0 } as AccountRow });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
