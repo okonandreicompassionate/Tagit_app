@@ -309,6 +309,37 @@ build blind:
   beyond that (a public follower-count-style number? verified-host badges?
   something else). Needs a concrete spec, not a guess, before it's buildable.
 
+## 14. Multiple admins, with roles — you as super admin
+
+> *"make way for other admins later in the future but im super super god
+> admin"*
+
+Logged, deliberately not built tonight — it's a real prerequisite chain, not
+a field to add. The dashboard's whole auth model right now
+(`dashboard/lib/session.ts`) is one shared password for anyone who knows it —
+there's no concept of *which* admin is looking at it, on purpose, per that
+file's own doc comment ("gates one shared password for a small team, not a
+multi-user auth system"). A `role` column only means something once there's
+a distinct identity to hang it off, so the real order of work is:
+
+1. Give each admin their own login (simplest: an `admins` table — email,
+   password hash or a magic-link flow, `role` in `('super_admin', 'admin')`
+   — swap the single `ADMIN_PASSWORD` check in `lib/session.ts` for a lookup
+   against it).
+2. Seed you as `super_admin` first.
+3. Gate the actually-dangerous actions (Accounts → Delete, and whatever the
+   dev/seed screen in §10 ends up doing) behind `role = 'super_admin'`;
+   regular admins get read access plus the safe writes.
+4. An "Invite an admin" screen — super-admin-only — for adding the rest of
+   the team later, which is the concrete version of "make way for other
+   admins."
+
+Doing this properly (password hashing, session-per-admin, not accidentally
+locking out the only login) is real, careful work — worth its own pass
+rather than a rushed addition next to tonight's other changes. Once
+`roadmap_items` exists (run `supabase/RUN-ADMIN-ROADMAP.sql`), this belongs
+in the dashboard's own Roadmap tab as a `planned` card instead of here.
+
 ---
 
 ## Status — verified against the live project, 2026-09-09
