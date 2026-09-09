@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Confetti } from '../src/components/Confetti';
 import { TagitLockup } from '../src/components/TagitMark';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { checkHandle, claimCard } from '../src/lib/account';
@@ -44,6 +45,7 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [snapCheck, setSnapCheck] = useState<HandleCheck | 'checking' | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
 
   const id = useMemo(() => toId(snap), [snap]);
 
@@ -96,7 +98,7 @@ export default function Onboarding() {
   };
 
   const submit = async () => {
-    if (!ready || busy) return;
+    if (!ready || busy || celebrate) return;
     setBusy(true);
     setError(null);
     try {
@@ -130,7 +132,10 @@ export default function Onboarding() {
           ...(tiktok.trim() ? { tiktok: tiktok.trim().replace(/^@+/, '') } : {}),
         },
       });
-      router.replace('/');
+      // A brand new card is the one moment here worth celebrating — a
+      // returning user restoring theirs above just gets sent straight in.
+      setCelebrate(true);
+      setTimeout(() => router.replace('/'), 650);
     } catch {
       setError("Couldn't save your card. Check your connection and try again.");
     } finally {
@@ -218,14 +223,16 @@ export default function Onboarding() {
         {error ? <Text style={s.error}>{error}</Text> : null}
 
         <Button
-          label={busy ? 'Setting up…' : 'Make my code'}
+          label={celebrate ? "You're in!" : busy ? 'Setting up…' : 'Make my code'}
           onPress={() => void submit()}
-          disabled={!ready || busy}
+          disabled={!ready || busy || celebrate}
         />
         <Text style={s.footnote}>
           Your card lives on your phone. Nothing is shared until someone scans your code.
         </Text>
       </ScrollView>
+
+      {celebrate ? <Confetti /> : null}
     </KeyboardAvoidingView>
   );
 }

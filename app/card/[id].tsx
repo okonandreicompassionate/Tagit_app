@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StreakFlame, TierBadge } from '../../src/components/Badges';
+import { Confetti } from '../../src/components/Confetti';
 import { SwagToast } from '../../src/components/SwagToast';
 import { Avatar, Button, Empty, Pill } from '../../src/components/ui';
 import * as api from '../../src/lib/api';
@@ -250,9 +251,12 @@ export default function CardSheet() {
       </ScrollView>
 
       {awards ? (
-        <View style={[s.toast, { top: insets.top + 12 }]}>
-          <SwagToast awards={awards} onDone={() => setAwards(null)} />
-        </View>
+        <>
+          <Confetti />
+          <View style={[s.toast, { top: insets.top + 12 }]}>
+            <SwagToast awards={awards} onDone={() => setAwards(null)} />
+          </View>
+        </>
       ) : null}
 
       {/* Pinned so the add action is always reachable without scrolling. */}

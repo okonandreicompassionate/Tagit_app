@@ -1,15 +1,8 @@
 import { Redirect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Rect } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodePane } from '../src/panes/CodePane';
 import { ScannerPane } from '../src/panes/ScannerPane';
 import { TaggedPane } from '../src/panes/TaggedPane';
@@ -19,37 +12,26 @@ import { isLive } from '../src/lib/rest';
 import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors } from '../src/theme';
 
-const PANES = ['Tagged', 'Scan', 'My code'] as const;
+const TAGGED = 0;
 const CAMERA = 1;
+const CODE = 2;
 
 /**
- * The whole app lives on one horizontally-paged screen and opens on the
- * camera, so the muscle memory matches Snapchat: swipe left for people you've
- * tagged, swipe right for your own code. No home screen, no tab bar.
+ * The whole app lives on one screen with a bottom tab bar, opening on the
+ * camera so the muscle memory matches Snapchat: friends on the left, your own
+ * code on the right. All three panes stay mounted (never remounted on tab
+ * switch — the camera in particular is expensive to warm up); the inactive
+ * ones are just laid out off-screen, and `active` still gates the camera.
  */
 export default function Home() {
   const me = useMe();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const adoptCard = useTagStore((s) => s.adoptCard);
   // null = still checking. Rendering the app before this resolves would flash
   // onboarding at someone who is already signed in.
   const [signedIn, setSignedIn] = useState<boolean | null>(isLive ? null : false);
-  const { width } = useWindowDimensions();
-  const scroller = useRef<ScrollView>(null);
-  const [pane, setPane] = useState<number>(CAMERA);
-
-  const goTo = useCallback(
-    (index: number) => {
-      scroller.current?.scrollTo({ x: index * width, animated: true });
-      setPane(index);
-    },
-    [width]
-  );
-
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next = Math.round(e.nativeEvent.contentOffset.x / width);
-    if (next !== pane) setPane(next);
-  };
+  const [tab, setTab] = useState<number>(CAMERA);
 
   useEffect(() => {
     if (!isLive) return;
@@ -91,69 +73,128 @@ export default function Home() {
 
   return (
     <View style={s.root}>
-      <ScrollView
-        ref={scroller}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        // Start on the camera without an animated jump on mount.
-        contentOffset={{ x: width * CAMERA, y: 0 }}
-        onMomentumScrollEnd={onScroll}
-        // The camera pane owns the full screen, so let it swallow taps.
-        keyboardShouldPersistTaps="handled">
-        <View style={{ width }}>
-          <TaggedPane
-            active={pane === 0}
-            onOpenPerson={(id) => router.push(`/card/${id}`)}
-            onBackToCamera={() => goTo(CAMERA)}
-          />
-        </View>
-        <View style={{ width }}>
-          <ScannerPane active={pane === CAMERA} onOpenCode={() => goTo(2)} />
-        </View>
-        <View style={{ width }}>
-          <CodePane active={pane === 2} onBackToCamera={() => goTo(CAMERA)} />
-        </View>
-      </ScrollView>
+      <View style={[StyleSheet.absoluteFill, tab !== TAGGED && s.hidden]}>
+        <TaggedPane
+          active={tab === TAGGED}
+          onOpenPerson={(id) => router.push(`/card/${id}`)}
+          onBackToCamera={() => setTab(CAMERA)}
+        />
+      </View>
+      <View style={[StyleSheet.absoluteFill, tab !== CAMERA && s.hidden]}>
+        <ScannerPane active={tab === CAMERA} onOpenCode={() => setTab(CODE)} />
+      </View>
+      <View style={[StyleSheet.absoluteFill, tab !== CODE && s.hidden]}>
+        <CodePane active={tab === CODE} onBackToCamera={() => setTab(CAMERA)} />
+      </View>
 
-      <View style={s.dots} pointerEvents="none">
-        {PANES.map((label, i) => (
-          <View key={label} style={s.dotWrap}>
-            <View style={[s.dot, i === pane && s.dotActive]} />
-            {i === pane ? <Text style={s.dotLabel}>{label}</Text> : null}
-          </View>
-        ))}
+      <View style={[s.bar, { paddingBottom: insets.bottom + 10 }]}>
+        <TabButton
+          label="Tagged"
+          active={tab === TAGGED}
+          onPress={() => setTab(TAGGED)}
+          icon={(c) => <PeopleIcon color={c} />}
+        />
+        <TabButton
+          label="Scan"
+          active={tab === CAMERA}
+          onPress={() => setTab(CAMERA)}
+          icon={(c) => <ScanIcon color={c} />}
+        />
+        <TabButton
+          label="My code"
+          active={tab === CODE}
+          onPress={() => setTab(CODE)}
+          icon={(c) => <CodeIcon color={c} />}
+        />
       </View>
     </View>
   );
 }
 
+function TabButton({
+  label,
+  active,
+  onPress,
+  icon,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  icon: (color: string) => React.ReactNode;
+}) {
+  const color = active ? colors.snap : colors.textDim;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      hitSlop={10}
+      style={s.tab}>
+      {icon(color)}
+      <Text style={[s.tabLabel, { color, opacity: active ? 1 : 0 }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+// Plain line icons, no glyphs — kept to one weight and one size so the bar
+// reads as a single quiet object rather than three different ideas.
+const STROKE = 1.7;
+
+function PeopleIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Circle cx="9" cy="8.5" r="3.2" stroke={color} strokeWidth={STROKE} />
+      <Circle cx="16" cy="10" r="2.6" stroke={color} strokeWidth={STROKE} />
+      <Rect
+        x="3.6"
+        y="14.2"
+        width="10.8"
+        height="6.4"
+        rx="3.2"
+        stroke={color}
+        strokeWidth={STROKE}
+      />
+      <Rect x="13" y="15.4" width="8" height="5.2" rx="2.6" stroke={color} strokeWidth={STROKE} />
+    </Svg>
+  );
+}
+
+function ScanIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Rect x="3.5" y="6.5" width="17" height="12" rx="3" stroke={color} strokeWidth={STROKE} />
+      <Circle cx="12" cy="12.5" r="3.4" stroke={color} strokeWidth={STROKE} />
+      <Rect x="9" y="4.4" width="6" height="2.6" rx="1" fill={color} />
+    </Svg>
+  );
+}
+
+function CodeIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
+      <Rect x="14" y="3.5" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
+      <Rect x="3.5" y="14" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
+      <Rect x="15.5" y="15.5" width="3.3" height="3.3" rx="0.8" fill={color} />
+    </Svg>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  dots: {
+  hidden: { display: 'none' },
+  bar: {
     position: 'absolute',
-    bottom: 14,
     left: 0,
     right: 0,
+    bottom: 0,
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 14,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: 10,
   },
-  dotWrap: { alignItems: 'center', gap: 4, minWidth: 24 },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textDim,
-  },
-  dotActive: { backgroundColor: colors.snap, width: 18 },
-  dotLabel: {
-    position: 'absolute',
-    top: 10,
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.textDim,
-    letterSpacing: 0.5,
-  },
+  tab: { flex: 1, alignItems: 'center', gap: 4 },
+  tabLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.2 },
 });
