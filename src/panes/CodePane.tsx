@@ -1,6 +1,8 @@
 import * as Brightness from 'expo-brightness';
 import * as Clipboard from 'expo-clipboard';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +15,24 @@ import { displayName, encodeTag } from '../lib/payload';
 import { isLive } from '../lib/rest';
 import { useAbout, useActiveEvent, useMe, useStats, useTagStore } from '../store/useTagStore';
 import { colors, radius, type } from '../theme';
+
+/**
+ * A quiet "am I actually on the latest version" line, since an OTA update is
+ * otherwise invisible — nothing in the UI changes to say one landed. Blank
+ * (`isEmbeddedLaunch`) means running exactly what was built into the APK,
+ * with no update applied on top of it yet.
+ */
+function buildLabel(): string {
+  const version = Constants.expoConfig?.version ?? '?';
+  if (Updates.isEmbeddedLaunch || !Updates.createdAt) return `v${version} · built-in, no update applied`;
+  const when = new Date(Updates.createdAt).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `v${version} · updated ${when}`;
+}
 
 /** Your own code — the thing you hold up for someone else to scan. */
 export function CodePane({
@@ -193,6 +213,8 @@ export function CodePane({
           <Text style={s.eventNote}>Join an event so your scans count on a leaderboard →</Text>
         </Pressable>
       )}
+
+      <Text style={s.build}>{buildLabel()}</Text>
     </ScrollView>
   );
 }
@@ -245,5 +267,11 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 10,
+  },
+  build: {
+    fontSize: 10,
+    color: colors.textDim,
+    opacity: 0.5,
+    textAlign: 'center',
   },
 });
