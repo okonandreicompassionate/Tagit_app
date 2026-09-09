@@ -222,6 +222,95 @@ backend, it's a liability — five fake people who look real.
 
 ---
 
+## 9. Delete account
+
+> *"add a delete acc too delete the tagit acc so i can maybe use the email
+> again"*
+
+Logged, not built. Real complexity, not just a button: deleting the
+`auth.users` row needs the Supabase admin API (service role), which a client
+app can never safely hold — this has to be a Supabase Edge Function the app
+calls, not a direct client delete. That function then needs to actually
+untangle a card from everything referencing it (`links` both directions,
+`checkins`, `friendships`, hosted `events`, `boosts`) — decide per table
+whether that means cascade-delete or anonymize-and-keep (an event you hosted
+probably shouldn't vanish for everyone who already checked in, for instance).
+Freeing the email/phone specifically means the deletion has to reach
+`auth.users`, not just `cards` — deleting only the card and leaving the auth
+identity behind would still block re-signup with the same contact.
+
+## 10. A dev/admin screen for seeding and resetting test data
+
+> *"add a dev screen to the admin let it be able to seed database add in
+> users and manipulate shii maybe handy for testing... maybe to clear all
+> users and events like start arsh with only table"*
+
+Logged, not built. Useful, but the destructive half ("clear all users and
+events") needs real guardrails before it exists at all — a wipe button in a
+shared admin dashboard is one misclick from deleting a live user's real
+data, not just test rows. Worth scoping as: gated behind a service-role-only
+Edge Function (never the anon key), a hard confirmation step, and ideally
+scoped to rows tagged as seed/test data specifically rather than "everything
+in the table" — the existing seeded-cards cleanup in
+`20260908234500_recompute_on_delete.sql` (`delete ... where id in
+('bigsho','tolu',...)`) is the pattern: explicit, named, never a blanket
+`delete from table`.
+
+## 11. A page explaining how the ranking algorithm works
+
+> *"hope you got my algorithm ready create a page on how it works"*
+
+The algorithm itself shipped and is live — `discover_feed()` in
+`supabase/migrations/20260909130000_personalized_feed.sql`, walked through
+in that file's own header comment (paid placement, then friends going, type
+and city affinity, urgency, new-listing bump, popularity, already-been
+penalty, in that order). What's logged as not-yet-built is a *user-facing*
+page explaining this in plain language — likely reachable from the feed
+screen itself ("Why am I seeing this?" or a static "How ranking works"
+screen), written for someone who's never read a scoring formula, not a copy
+of the SQL comment.
+
+## 12. Hosts earn swag from their event's attendance
+
+> *"the more ppl scan ur event as a user adds to ur swag points"*
+
+Logged, not built. Currently `cards.swag` only sums a card's own `links` and
+`checkins` — nothing credits the host when someone else checks into their
+event. Shape of the fix: extend `recompute_swag_for()` (or a sibling
+function) to also sum something like `checkins.qr-method count for events
+hosted by this card`, and wire it into the same triggers that already fire
+on checkin insert/delete so it stays live rather than needing a manual
+recompute. Worth deciding a per-checkin value before building it — reusing
+`POINTS.checkIn` (20) directly could make a well-attended event worth an
+enormous, leaderboard-dominating amount very fast; a smaller or diminishing
+rate is probably right, not a decision to make silently while writing the
+migration.
+
+## 13. Notifications, and a broader "make swag feel like status" pass
+
+> *"swag point is your popularity makes u famous on the app make it social
+> media ish big names get credit... inportantly add notifications for
+> everything"*
+
+Logged, deliberately not scoped yet — both pieces are too open-ended to
+build blind:
+
+- **Notifications "for everything"** could mean an in-app list (a bell icon,
+  a feed of "X added you", "Y scanned you", "your event got N check-ins"),
+  real push notifications (needs Expo push tokens, a sender, and decisions
+  about which events actually warrant interrupting someone), or both. These
+  have very different build costs and user-facing tradeoffs — worth a short
+  back-and-forth on which events matter and whether push is in scope before
+  writing a notifications table.
+- **"Social media-ish, big names get credit"** reads as a product direction
+  (public profiles/leaderboards that read as status, not just a number) more
+  than a single feature — the tier system and leaderboard already exist
+  toward this; what's unclear is what "credit" should concretely look like
+  beyond that (a public follower-count-style number? verified-host badges?
+  something else). Needs a concrete spec, not a guess, before it's buildable.
+
+---
+
 ## Status — verified against the live project, 2026-09-09
 
 Checked directly rather than assumed: queried the database and EAS, not just
