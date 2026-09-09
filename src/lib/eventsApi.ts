@@ -130,6 +130,59 @@ export const rankEvents = (a: TagEvent, b: TagEvent) => {
   return (a.startsAt ?? Infinity) - (b.startsAt ?? Infinity);
 };
 
+type FeedPageRow = FeedRow & { friends_going: number; rank_score: number };
+
+/**
+ * One page of the personalized feed — paid placement, then friends going,
+ * then what the viewer actually goes to, then everything else. See
+ * `discover_feed()` in supabase/migrations/20260909130000_personalized_feed.sql
+ * for the exact scoring; this is the thin client wrapper around it.
+ *
+ * `viewerId` is required: without a signed-in card there's no history to
+ * personalize from, and the caller should fall through to `discoverEvents()`
+ * (paid + soonest) instead — see `app/feed.tsx`.
+ */
+export async function getFeedPage(args: {
+  viewerId: string;
+  offset: number;
+  limit?: number;
+}): Promise<TagEvent[]> {
+  if (!isLive) {
+    // No RPC in mock mode; the static rank is the closest honest equivalent
+    // — no personalization signals exist without a real backend either.
+    const sorted = [...MOCK_EVENTS].filter((e) => e.visibility === 'public').sort(rankEvents);
+    return sorted.slice(args.offset, args.offset + (args.limit ?? 20));
+  }
+
+  const rows = await rest<FeedPageRow[]>('rpc/discover_feed', {
+    method: 'POST',
+    body: JSON.stringify({
+      p_viewer: args.viewerId,
+      p_offset: args.offset,
+      p_limit: args.limit ?? 20,
+    }),
+  });
+
+  return rows.map((r) => ({ ...toEvent(r), friendsGoing: r.friends_going }));
+}
+
+/**
+ * Light diversity pass over one already-ranked page: if the same host lands
+ * back to back, swap the second one forward a slot. Pure presentation — it
+ * never changes what's *in* the page, only the order within it, so it can't
+ * fight the SQL ranking, only smooth it.
+ */
+export function diversify(events: TagEvent[]): TagEvent[] {
+  const out = [...events];
+  for (let i = 1; i < out.length; i++) {
+    if (out[i].hostCardId && out[i].hostCardId === out[i - 1].hostCardId) {
+      const swapWith = out.findIndex((e, j) => j > i && e.hostCardId !== out[i - 1].hostCardId);
+      if (swapWith !== -1) [out[i], out[swapWith]] = [out[swapWith], out[i]];
+    }
+  }
+  return out;
+}
+
 /**
  * One event by id. Falls back to the `events` table when the feed has nothing,
  * which is how a private event opened from an invite link resolves — it is

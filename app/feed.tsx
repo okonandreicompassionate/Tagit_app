@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -14,12 +14,22 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatWhen } from '../src/components/EventCard';
 import { Button, Empty, Pill } from '../src/components/ui';
-import { discoverEvents } from '../src/lib/eventsApi';
+import { diversify, discoverEvents, getFeedPage } from '../src/lib/eventsApi';
+import { useMe } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
 import { EVENT_TYPE_LABELS, type TagEvent } from '../src/types';
 
+const PAGE_SIZE = 20;
+
 /**
  * The events feed: one event per screen, swipe up for the next.
+ *
+ * Genuinely paginated — a page loads as you approach the end rather than
+ * capping at one batch — and, once signed in, ranked per-viewer by
+ * `discover_feed()`: paid placement first, then friends who are verifiably
+ * going, then what the viewer actually shows up to. Signed out or offline,
+ * it falls back to the same paid-then-soonest order the Events tab uses,
+ * since there's no history yet to personalize from.
  *
  * Artwork-led rather than list-led — which is the whole point, and also its
  * weakness: an event with no artwork gets a generated gradient instead, so the
@@ -29,21 +39,64 @@ import { EVENT_TYPE_LABELS, type TagEvent } from '../src/types';
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const me = useMe();
   const { height, width } = Dimensions.get('window');
 
   const [events, setEvents] = useState<TagEvent[] | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  // Guards against onEndReached firing twice for the same page — FlatList
+  // can call it repeatedly while a fetch is still in flight.
+  const fetching = useRef(false);
 
-  const load = useCallback(async () => {
+  const fetchPage = useCallback(
+    async (offset: number): Promise<TagEvent[]> => {
+      if (me) return diversify(await getFeedPage({ viewerId: me.id, offset, limit: PAGE_SIZE }));
+      // No signed-in card: nothing to personalize with, so this is the same
+      // paid-then-soonest list the Events tab shows, just paged by hand.
+      const all = await discoverEvents({ limit: 200 });
+      return all.slice(offset, offset + PAGE_SIZE);
+    },
+    [me]
+  );
+
+  const loadFirst = useCallback(async () => {
+    setEvents(null);
+    setHasMore(true);
     try {
-      setEvents(await discoverEvents({ limit: 40 }));
+      const page = await fetchPage(0);
+      setEvents(page);
+      setHasMore(page.length === PAGE_SIZE);
     } catch {
       setEvents([]);
+      setHasMore(false);
     }
-  }, []);
+  }, [fetchPage]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadFirst();
+  }, [loadFirst]);
+
+  const loadMore = useCallback(async () => {
+    if (fetching.current || !hasMore || events === null) return;
+    fetching.current = true;
+    setLoadingMore(true);
+    try {
+      const page = await fetchPage(events.length);
+      // Events can be created between pages; de-dupe defensively rather than
+      // risk a duplicate key crashing the list.
+      setEvents((prev) => {
+        const seen = new Set(prev?.map((e) => e.id));
+        return [...(prev ?? []), ...page.filter((e) => !seen.has(e.id))];
+      });
+      setHasMore(page.length === PAGE_SIZE);
+    } catch {
+      setHasMore(false);
+    } finally {
+      fetching.current = false;
+      setLoadingMore(false);
+    }
+  }, [events, fetchPage, hasMore]);
 
   if (events === null) {
     return (
@@ -80,6 +133,20 @@ export default function Feed() {
         maxToRenderPerBatch={2}
         removeClippedSubviews
         getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
+        onEndReachedThreshold={1.5}
+        onEndReached={() => void loadMore()}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={[s.center, { height, width }]}>
+              <ActivityIndicator color={colors.snap} />
+            </View>
+          ) : !hasMore ? (
+            <View style={[s.center, { height, width, paddingHorizontal: 40 }]}>
+              <Text style={s.endTitle}>That's everything for now</Text>
+              <Text style={s.endBody}>Check back later, or host your own.</Text>
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <EventPage
             event={item}
@@ -164,6 +231,13 @@ function EventPage({
             ) : boosted ? (
               <Pill color={colors.snap}>BOOSTED</Pill>
             ) : null}
+            {/* The one ranking signal worth showing, not just acting on —
+                it's why this landed here, and it's true. */}
+            {event.friendsGoing ? (
+              <Pill color={colors.good} filled>
+                {event.friendsGoing === 1 ? '1 FRIEND GOING' : `${event.friendsGoing} FRIENDS GOING`}
+              </Pill>
+            ) : null}
           </View>
 
           <Text style={s.when}>{formatWhen(event.startsAt)}</Text>
@@ -210,6 +284,8 @@ const s = StyleSheet.create({
   place: { ...type.body, color: colors.text, opacity: 0.85 },
   desc: { fontSize: 14.5, color: colors.text, opacity: 0.8, lineHeight: 20 },
   going: { fontSize: 12.5, fontWeight: '700', color: colors.snap },
+  endTitle: { ...type.h2, color: colors.text, textAlign: 'center' },
+  endBody: { fontSize: 13.5, color: colors.textDim, textAlign: 'center', marginTop: 6 },
   close: {
     position: 'absolute',
     right: 16,

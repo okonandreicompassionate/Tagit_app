@@ -6,7 +6,8 @@
   "exclude": [
     "node_modules",
     "src/**/__tests__/**",
-    "supabase/functions/**"
+    "supabase/functions/**",
+    "dashboard/**"
   ],
   "include": [
     "**/*.ts",

@@ -15,10 +15,11 @@ import { StreakFlame, TierBadge } from '../../src/components/Badges';
 import { SwagToast } from '../../src/components/SwagToast';
 import { Avatar, Button, Empty, Pill } from '../../src/components/ui';
 import * as api from '../../src/lib/api';
+import { acceptFriend } from '../../src/lib/friends';
 import { displayName } from '../../src/lib/payload';
 import { openSocial, SOCIALS, SOCIAL_ORDER } from '../../src/lib/socials';
 import { streakAlive, streakExpiresIn, type Award } from '../../src/lib/swag';
-import { useTagStore } from '../../src/store/useTagStore';
+import { useMe, useTagStore } from '../../src/store/useTagStore';
 import { colors, radius, type } from '../../src/theme';
 import type { Card } from '../../src/types';
 
@@ -28,16 +29,22 @@ import type { Card } from '../../src/types';
  */
 export default function CardSheet() {
   // `scan` is set only by the camera. Opening this sheet from the Tagged list
-  // must never record a new link or award points.
-  const { id, event, scan } = useLocalSearchParams<{
+  // must never record a new link or award points. `incoming` is set only by
+  // IncomingLinkWatcher, when this sheet opens because someone else just
+  // scanned the viewer — the one case worth greeting differently, since
+  // otherwise this looks identical to browsing your own Tagged list.
+  const { id, event, scan, incoming } = useLocalSearchParams<{
     id: string;
     event?: string;
     scan?: string;
+    incoming?: string;
   }>();
   const fromScan = scan === '1';
+  const isIncoming = incoming === '1';
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const me = useMe();
   const tag = useTagStore((s) => s.tag);
   const setNote = useTagStore((s) => s.setNote);
   const markAddedOnSnap = useTagStore((s) => s.markAddedOnSnap);
@@ -117,6 +124,13 @@ export default function CardSheet() {
   const addOnSnap = async () => {
     if (!snap) return;
     markAddedOnSnap(card.id);
+    // Adding on Snap is a deliberate, active second step — a stronger signal
+    // of "we're actually connected" than the passive act of scanning a code
+    // ever was. Treat it as consent on both sides: confirm the friendship
+    // now rather than waiting on them to scan back. The row already exists
+    // (this screen only exists because a scan created it), so this is an
+    // update, never a fresh request landing unprompted in their list.
+    if (me) void acceptFriend(me.id, card.id);
     await openSocial('snap', snap);
   };
 
@@ -139,6 +153,12 @@ export default function CardSheet() {
         contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}>
         <View style={s.grabber} />
+
+        {isIncoming ? (
+          <View style={s.incomingBanner}>
+            <Text style={s.incomingText}>🎉 {displayName(card)} just scanned you</Text>
+          </View>
+        ) : null}
 
         <View style={{ alignItems: 'center', gap: 10 }}>
           <Avatar uri={card.avatar} name={card.name} size={92} ring={colors.snap} />
@@ -256,6 +276,15 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 24, paddingTop: 10, gap: 22 },
+  incomingBanner: {
+    alignSelf: 'center',
+    backgroundColor: colors.snap,
+    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  incomingText: { color: colors.snapInk, fontSize: 13.5, fontWeight: '800' },
   grabber: {
     alignSelf: 'center',
     width: 40,

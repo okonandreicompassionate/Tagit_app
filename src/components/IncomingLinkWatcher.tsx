@@ -8,8 +8,22 @@ import { useMe, useTagStore } from '../store/useTagStore';
  * Makes a scan mutual from the scanned person's side.
  *
  * When A scans B, a database trigger writes the mirrored link for B. This
- * listens for that row and pops A's profile on B's phone — so one scan shows
- * both people each other, and nobody has to scan twice.
+ * listens for that row and pops a full-screen takeover on B's phone showing
+ * A's profile — with the same "Add on Snap" button A saw — so one scan shows
+ * both people each other, and nobody has to scan twice. The screen it opens
+ * (`card/[id]`) is already a modal presentation in the router config, so this
+ * genuinely takes the screen over regardless of what B was doing.
+ *
+ * Two things this deliberately does NOT try to do:
+ *  - Show the exact swag just earned. The server prices a reciprocal link
+ *    differently from an outbound one (see `mirror_link()`), and this project
+ *    has already hit real bugs from client and server scoring logic quietly
+ *    drifling apart — so rather than re-derive a number that might be wrong,
+ *    this refetches the user's own card and takes the server's total as
+ *    truth. Slower than a guess, never inaccurate.
+ *  - Distinguish itself with router state alone. `incoming=1` on the push is
+ *    what tells `card/[id]` to render the "just scanned you" banner instead
+ *    of the ordinary profile header.
  *
  * Renders nothing. Mounted once, near the root.
  *
@@ -22,6 +36,7 @@ export function IncomingLinkWatcher() {
   const me = useMe();
   const receiveLink = useTagStore((s) => s.receiveLink);
   const rememberedEvents = useTagStore((s) => s.events);
+  const adoptCard = useTagStore((s) => s.adoptCard);
 
   useEffect(() => {
     if (!supabase || !me) return;
@@ -61,8 +76,26 @@ export function IncomingLinkWatcher() {
               });
 
               // No `scan=1`: the link is already recorded on both sides, so
-              // this only opens their profile.
-              router.push({ pathname: '/card/[id]', params: { id: card.id } });
+              // this only opens their profile. `incoming=1` is what makes the
+              // sheet greet this as "you were just scanned" rather than an
+              // ordinary profile open.
+              router.push({
+                pathname: '/card/[id]',
+                params: { id: card.id, incoming: '1' },
+              });
+
+              // The mirror trigger just changed this user's own swag total on
+              // the server. The local copy has no way to know that on its
+              // own — refetch rather than estimate, so the number shown
+              // anywhere in the app (tier, profile, leaderboard row) is the
+              // server's real total, not a guess that could drift from it.
+              if (me) {
+                getCard(me.id)
+                  .then((mine) => {
+                    if (mine) adoptCard(mine);
+                  })
+                  .catch(() => {});
+              }
             } catch (err) {
               if (__DEV__) console.warn('[realtime] incoming link failed:', err);
             }

@@ -93,6 +93,13 @@ export type TagEvent = {
   /** Verified check-ins, denormalised for list rendering. */
   attendeeCount: number;
   createdAt: number;
+  /**
+   * How many of the viewer's accepted friends are verifiably tied to this
+   * event. Only present on rows from the personalized feed — it's the
+   * reason something ranked where it did, and the one signal worth actually
+   * showing rather than hiding behind a black-box score.
+   */
+  friendsGoing?: number;
   /** Set when the current user has joined this event. */
   joinedAt?: number;
 };
