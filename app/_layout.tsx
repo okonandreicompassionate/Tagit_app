@@ -36,6 +36,7 @@ export default function RootLayout() {
             <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
             <Stack.Screen name="leaderboard" options={{ presentation: 'modal' }} />
             <Stack.Screen name="events" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
             <Stack.Screen name="search" options={{ presentation: 'modal' }} />
             {/* Full screen: it's an artwork feed, not a sheet. */}
             <Stack.Screen name="feed" options={{ animation: 'slide_from_bottom' }} />

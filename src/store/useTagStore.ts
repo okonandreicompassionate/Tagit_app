@@ -26,6 +26,8 @@ type State = {
   /** Points from the most recent scan, held just long enough to animate them. */
   lastAwards: Award[] | null;
   hydrated: boolean;
+  /** Anything after this is "new" for the notifications badge. */
+  lastSeenNotificationsAt: number;
 };
 
 type Actions = {
@@ -65,6 +67,7 @@ type Actions = {
    * Call this on every app open, not just the first one.
    */
   syncTagged: () => Promise<{ card: Card; at: number }[]>;
+  markNotificationsSeen: () => void;
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
@@ -83,6 +86,7 @@ const initial: State = {
   activeEventId: null,
   lastAwards: null,
   hydrated: false,
+  lastSeenNotificationsAt: 0,
 };
 
 export const useTagStore = create<State & Actions>()(
@@ -291,6 +295,8 @@ export const useTagStore = create<State & Actions>()(
 
       clearAwards: () => set({ lastAwards: null }),
 
+      markNotificationsSeen: () => set({ lastSeenNotificationsAt: Date.now() }),
+
       setNote: (cardId, note) => {
         const person = get().tagged[cardId];
         if (!person) return;
@@ -329,12 +335,13 @@ export const useTagStore = create<State & Actions>()(
       name: 'tag-store-v2',
       storage: createJSONStorage(() => AsyncStorage),
       // `hydrated` and `lastAwards` are session state, never persisted.
-      partialize: ({ me, tagged, events, checkins, activeEventId }) => ({
+      partialize: ({ me, tagged, events, checkins, activeEventId, lastSeenNotificationsAt }) => ({
         me,
         tagged,
         events,
         checkins,
         activeEventId,
+        lastSeenNotificationsAt,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error && __DEV__) console.warn('[store] rehydrate failed:', error);
@@ -356,6 +363,21 @@ export const useTaggedList = (): TaggedPerson[] => {
 
 export const lastLink = (p: TaggedPerson) =>
   p.links.length ? Math.max(...p.links.map((l) => l.at)) : 0;
+
+/**
+ * Drives the notifications badge. Counts only incoming scans, not everything
+ * the notifications screen shows (a pending friend request is server state,
+ * not something synced into local `tagged` the same way) — good enough for
+ * "something's new", not a perfectly exhaustive count.
+ */
+export const useUnseenNotificationCount = (): number => {
+  const tagged = useTagStore((s) => s.tagged);
+  const lastSeen = useTagStore((s) => s.lastSeenNotificationsAt);
+  return Object.values(tagged).reduce(
+    (n, p) => n + p.links.filter((l) => l.direction === 'scanned_by' && l.at > lastSeen).length,
+    0
+  );
+};
 
 export const useActiveEvent = (): TagEvent | null => {
   const id = useTagStore((s) => s.activeEventId);

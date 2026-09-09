@@ -11,7 +11,7 @@ import { cancelNfc, isNfcAvailable, readTagUrl } from '../lib/nfc';
 import { decodeScan } from '../lib/payload';
 import { ScanFrame } from '../components/ScanFrame';
 import { Avatar, Button } from '../components/ui';
-import { useActiveEvent, useMe } from '../store/useTagStore';
+import { useActiveEvent, useMe, useUnseenNotificationCount } from '../store/useTagStore';
 import { colors, radius } from '../theme';
 
 /** How long to ignore the camera after a hit, so one code fires once. */
@@ -27,6 +27,7 @@ export function ScannerPane({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const me = useMe();
+  const unseen = useUnseenNotificationCount();
   const event = useActiveEvent();
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
@@ -198,6 +199,15 @@ export function ScannerPane({
           style={s.iconBtn}>
           <Text style={s.icon}>🏆</Text>
         </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={unseen > 0 ? `Notifications, ${unseen} new` : 'Notifications'}
+          onPress={() => router.push('/notifications')}
+          style={s.iconBtn}>
+          <BellIcon color={colors.text} />
+          {unseen > 0 ? <View style={s.badge} /> : null}
+        </Pressable>
       </View>
 
       <View style={s.center} pointerEvents="none">
@@ -270,6 +280,20 @@ function TicketIcon({ color }: { color: string }) {
   );
 }
 
+function BellIcon({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 10.5a6 6 0 0 1 12 0c0 3.2 1 5 1.6 5.8H4.4C5 15.5 6 13.7 6 10.5Z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinejoin="round"
+      />
+      <Path d="M10 18.5a2 2 0 0 0 4 0" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   gate: { paddingHorizontal: 32, gap: 14, alignItems: 'stretch' },
@@ -315,8 +339,20 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   iconBtnOn: { backgroundColor: colors.snap },
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.snap,
+    borderWidth: 1.5,
+    borderColor: colors.bg,
+  },
   tapBtn: {
     position: 'absolute',
     top: '64%',
