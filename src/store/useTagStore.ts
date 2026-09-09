@@ -64,7 +64,7 @@ type Actions = {
    * offline, a fresh install) never reaches the local store any other way.
    * Call this on every app open, not just the first one.
    */
-  syncTagged: () => Promise<void>;
+  syncTagged: () => Promise<{ card: Card; at: number }[]>;
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
@@ -248,14 +248,23 @@ export const useTagStore = create<State & Actions>()(
 
       syncTagged: async () => {
         const me = get().me;
-        if (!me) return;
+        if (!me) return [];
         try {
           const rows = await api.myLinks(me.id);
-          if (!rows.length) return;
+          if (!rows.length) return [];
 
+          const before = get().tagged;
           const ids = [...new Set(rows.map((r) => r.to_card))];
           const cards = await api.getCards(ids);
           const byId = new Map(cards.map((c) => [c.id, c]));
+
+          // Rows this device didn't already know about, and where the OTHER
+          // person did the scanning ('scanned_by' — see LinkEvent's doc
+          // comment) — the ones worth surfacing as "you were just scanned",
+          // not just quietly merged. Checked against timestamp, not just
+          // whether the person is known, so a second scan from someone
+          // already on this list still counts.
+          const freshIncoming: { card: Card; at: number }[] = [];
 
           // Reuses receiveLink's own merge and dedupe rather than a wholesale
           // overwrite, so a scan this device already knows about from a live
@@ -264,14 +273,19 @@ export const useTagStore = create<State & Actions>()(
           for (const row of rows) {
             const card = byId.get(row.to_card);
             if (!card) continue; // the card was since deleted
-            get().receiveLink(card, {
-              eventId: row.event_id ?? undefined,
-              at: new Date(row.created_at).getTime(),
-              direction: row.direction,
-            });
+            const at = new Date(row.created_at).getTime();
+
+            const known = before[row.to_card]?.links ?? [];
+            const isNew = !known.some((l) => Math.abs(l.at - at) < 1000);
+            if (isNew && row.direction === 'scanned_by') freshIncoming.push({ card, at });
+
+            get().receiveLink(card, { eventId: row.event_id ?? undefined, at, direction: row.direction });
           }
+
+          return freshIncoming;
         } catch (err) {
           if (__DEV__) console.warn('[store] syncTagged failed:', err);
+          return [];
         }
       },
 

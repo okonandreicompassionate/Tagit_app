@@ -17,6 +17,10 @@ const TAGGED = 0;
 const CAMERA = 1;
 const CODE = 2;
 
+/** How fresh an unseen incoming scan has to be to still greet with a popup —
+ * old enough and it reads as a random ambush rather than "you just met". */
+const RECENT_SCAN_MS = 10 * 60 * 1000;
+
 /**
  * The whole app lives on one screen with a bottom tab bar, opening on the
  * camera so the muscle memory matches Snapchat: friends on the left, your own
@@ -59,14 +63,24 @@ export default function Home() {
 
       // Every open, not just the first: a scan that landed while this phone
       // was closed or offline only ever reaches the server, never this
-      // device's local store, until something asks for it.
-      if (alive) void syncTagged();
+      // device's local store, until something asks for it. If one of those
+      // happened recently enough that it's still worth greeting, show the
+      // same takeover Realtime would have — covers a scan Realtime missed
+      // while this phone was closed, same as the poll in CodePane covers one
+      // it missed while the phone was open.
+      if (!alive) return;
+      const fresh = await syncTagged();
+      const recent = fresh.filter((f) => Date.now() - f.at < RECENT_SCAN_MS);
+      if (alive && recent.length) {
+        const latest = recent.sort((a, b) => b.at - a.at)[0];
+        router.push({ pathname: '/card/[id]', params: { id: latest.card.id, incoming: '1' } });
+      }
     })();
 
     return () => {
       alive = false;
     };
-  }, [me, adoptCard, syncTagged]);
+  }, [me, adoptCard, syncTagged, router]);
 
   // Hooks first, then the gates.
   if (signedIn === null) {

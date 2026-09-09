@@ -102,7 +102,16 @@ export function IncomingLinkWatcher() {
           })();
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        // SUBSCRIBED is the only status that means this is actually live —
+        // CHANNEL_ERROR/TIMED_OUT/CLOSED all mean the popup silently won't
+        // fire, with nothing else in the app able to tell. CodePane's poll
+        // is the fallback for exactly that; this is just so it's visible
+        // somewhere if it happens again.
+        if (__DEV__ && status !== 'SUBSCRIBED') {
+          console.warn('[realtime] links channel status:', status, err ?? '');
+        }
+      });
 
     return () => {
       void supabase?.removeChannel(channel);

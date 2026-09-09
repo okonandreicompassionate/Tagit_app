@@ -10,7 +10,8 @@ import { TagCode } from '../components/TagCode';
 import { Button, Stat } from '../components/ui';
 import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { displayName, encodeTag } from '../lib/payload';
-import { useAbout, useActiveEvent, useMe, useStats } from '../store/useTagStore';
+import { isLive } from '../lib/rest';
+import { useAbout, useActiveEvent, useMe, useStats, useTagStore } from '../store/useTagStore';
 import { colors, radius, type } from '../theme';
 
 /** Your own code — the thing you hold up for someone else to scan. */
@@ -24,6 +25,7 @@ export function CodePane({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const me = useMe();
+  const syncTagged = useTagStore((s) => s.syncTagged);
   const event = useActiveEvent();
   const stats = useStats();
   const about = useAbout();
@@ -59,6 +61,31 @@ export function CodePane({
       if (previous !== null) void Brightness.setBrightnessAsync(previous).catch(() => {});
     };
   }, [active]);
+
+  /**
+   * The moment this screen is up is the moment someone else's camera is
+   * pointed at it — exactly when a missed Realtime push matters most, and
+   * exactly when it's cheap to just ask the server directly instead of
+   * trusting a websocket to say so. Polls only while this screen is the one
+   * on screen; stops the instant it isn't.
+   */
+  useEffect(() => {
+    if (!active || !isLive) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      const fresh = await syncTagged();
+      if (cancelled || !fresh.length) return;
+      const latest = fresh.sort((a, b) => b.at - a.at)[0];
+      router.push({ pathname: '/card/[id]', params: { id: latest.card.id, incoming: '1' } });
+    };
+
+    const id = setInterval(() => void poll(), 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [active, syncTagged, router]);
 
   if (!me) return <View style={s.root} />;
 
