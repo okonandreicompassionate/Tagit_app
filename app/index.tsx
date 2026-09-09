@@ -7,6 +7,7 @@ import { CodePane } from '../src/panes/CodePane';
 import { ScannerPane } from '../src/panes/ScannerPane';
 import { TaggedPane } from '../src/panes/TaggedPane';
 import { myCard } from '../src/lib/account';
+import * as api from '../src/lib/api';
 import { currentUserId } from '../src/lib/auth';
 import { TAB_BAR_HEIGHT } from '../src/lib/layout';
 import { isLive } from '../src/lib/rest';
@@ -49,15 +50,37 @@ export default function Home() {
       setSignedIn(Boolean(uid));
       if (!uid) return;
 
+      let current = me;
+
       // Signed in on a fresh install: pull the account's card back down so the
       // user lands in the app rather than being asked to sign up again.
-      if (!me) {
+      if (!current) {
         try {
           const card = await myCard();
-          if (alive && card) adoptCard(card);
+          if (!alive) return;
+          if (card) {
+            adoptCard(card);
+            current = card;
+          }
         } catch {
           // Offline. Onboarding still resolves the handle as "yours".
           return;
+        }
+      }
+
+      // A card exists locally the moment onboarding finishes, whether or not
+      // it actually reached the server — local-first, on purpose, so signup
+      // works offline. But if that save silently failed (dropped connection,
+      // anything), nobody ever finds out until someone else scans them and
+      // gets "no card behind that code". Checked and retried on every open
+      // instead, so a card that never made it up heals itself the next time
+      // this phone has a connection, with nothing for the user to do.
+      if (current) {
+        try {
+          const exists = await api.getCard(current.id);
+          if (alive && !exists) await api.saveCard(current);
+        } catch {
+          // Still offline, or the server's unreachable — retried next open.
         }
       }
 
