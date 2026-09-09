@@ -24,6 +24,7 @@ export function AccountsClient() {
   const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
   const [newSnap, setNewSnap] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -36,7 +37,7 @@ export function AccountsClient() {
       const res = await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: newId, name: newName, snap: newSnap }),
+        body: JSON.stringify({ id: newId, name: newName, snap: newSnap, email: newEmail }),
       });
       const body = await res.json();
       if (!res.ok || body.error) {
@@ -47,6 +48,7 @@ export function AccountsClient() {
       setNewId('');
       setNewName('');
       setNewSnap('');
+      setNewEmail('');
       setShowAdd(false);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Network error');
@@ -137,10 +139,11 @@ export function AccountsClient() {
         {showAdd ? (
           <Card className="mb-5 p-5">
             <p className="mb-4 text-[12.5px] text-dim">
-              Seeds a card directly — no phone, no email. Unclaimed, same as a demo card, until
-              someone actually signs into it from the app.
+              Leave email blank for an unclaimed card (same as a demo row — nobody can sign into
+              it). Add one and it's created pre-confirmed, so you can actually sign into the app
+              as this account with a real OTP right away — no inbox needed for the first code.
             </p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-faint">
                   Handle
@@ -160,6 +163,18 @@ export function AccountsClient() {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Test User"
+                  className="w-full rounded-lg border border-edge bg-surfhi px-3 py-2 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-faint">
+                  Email (optional — makes it signed in)
+                </label>
+                <input
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="test1@yourdomain.com"
+                  type="email"
                   className="w-full rounded-lg border border-edge bg-surfhi px-3 py-2 text-[13.5px] text-white placeholder:text-faint focus:border-snap focus:outline-none"
                 />
               </div>

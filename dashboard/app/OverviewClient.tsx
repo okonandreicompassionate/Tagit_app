@@ -2,6 +2,7 @@
 
 import { usePolling } from '@/lib/usePolling';
 import { Card, ErrorBanner, Pill, SectionTitle, StatTile, relativeTime } from '@/lib/ui';
+import type { ActivityEvent } from './api/activity/route';
 
 type EventRow = {
   id: string;
@@ -57,8 +58,14 @@ const boostTone: Record<BoostRow['status'], 'good' | 'warn' | 'flame' | 'default
   refunded: 'default',
 };
 
+const activityDot: Record<ActivityEvent['kind'], string> = {
+  scan: 'bg-snap',
+  checkin: 'bg-good',
+};
+
 export function OverviewClient() {
   const { data, error, updatedAt } = usePolling<Overview>('/api/overview', 20_000);
+  const activity = usePolling<{ events: ActivityEvent[] }>('/api/activity', 15_000);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
@@ -77,6 +84,30 @@ export function OverviewClient() {
         <StatTile value={data?.totals.checkins ?? '—'} label="Check-ins" />
         <StatTile value={data?.totals.links ?? '—'} label="Scans" />
         <StatTile value={data ? naira(data.totals.revenueNaira) : '—'} label="Boost revenue" accent />
+      </section>
+
+      <section className="mt-10">
+        <SectionTitle sub="The last 60 scans and check-ins, across everyone — polls every 15s.">
+          Recent activity
+        </SectionTitle>
+        {activity.error ? <ErrorBanner message={activity.error} /> : null}
+        <Card className="max-h-[420px] overflow-y-auto p-1">
+          {(activity.data?.events ?? []).map((e) => (
+            <div key={e.key} className="flex items-center gap-3 border-b border-edge/60 px-3.5 py-2.5 last:border-0">
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${activityDot[e.kind]}`} />
+              <p className="flex-1 truncate text-[13px]">
+                <span className="font-semibold">{e.who}</span>{' '}
+                <span className="text-dim">{e.detail}</span>
+              </p>
+              <span className="shrink-0 font-mono text-[11px] text-faint">
+                {new Date(e.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+          {activity.data && activity.data.events.length === 0 ? (
+            <p className="px-3.5 py-6 text-[13px] text-dim">Nothing yet.</p>
+          ) : null}
+        </Card>
       </section>
 
       <section className="mt-10">

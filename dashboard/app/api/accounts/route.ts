@@ -64,12 +64,19 @@ export async function GET() {
 }
 
 const HANDLE_RE = /^[a-z0-9_.-]{2,40}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Seeds a card directly — no phone, no email, no auth at all, same shape as
- * the demo cards already in the table (`owner` stays null until someone
- * actually signs into it from the app). For testing flows that need a second
- * or third real card to scan without roping in another real phone.
+ * Seeds a card — and, when an email is given, a real signed-in identity
+ * behind it. Without one this is an unclaimed card, same shape as the demo
+ * rows (nobody can actually open the app as them). With one, it's created
+ * pre-confirmed (`email_confirm: true`) via the admin API, so the real app's
+ * `signInWithOtp` works against it immediately — no inbox needed to send the
+ * first code, since the account already exists and is verified.
+ *
+ * Auth user created before the card, deliberately: if the card insert then
+ * fails (handle taken), the just-created auth user is torn back down rather
+ * than left behind as a claimed-but-cardless account sitting on that email.
  */
 export async function POST(req: Request) {
   try {
@@ -77,6 +84,7 @@ export async function POST(req: Request) {
     const id = String(body.id ?? '').trim().toLowerCase();
     const name = String(body.name ?? '').trim();
     const snap = typeof body.snap === 'string' ? body.snap.trim().replace(/^@+/, '') : '';
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
 
     if (!HANDLE_RE.test(id)) {
       return NextResponse.json(
@@ -87,18 +95,39 @@ export async function POST(req: Request) {
     if (name.length < 2 || name.length > 60) {
       return NextResponse.json({ error: 'Name must be 2–60 characters.' }, { status: 400 });
     }
+    if (email && !EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: 'That email address doesn’t look right.' }, { status: 400 });
+    }
 
     const db = supabaseAdmin();
+
+    let owner: string | null = null;
+    if (email) {
+      const { data: created, error: authError } = await db.auth.admin.createUser({
+        email,
+        email_confirm: true,
+      });
+      if (authError) {
+        const taken = authError.status === 422 || /already/i.test(authError.message);
+        return NextResponse.json(
+          { error: taken ? `${email} already has an account.` : authError.message },
+          { status: taken ? 409 : 502 }
+        );
+      }
+      owner = created.user.id;
+    }
+
     // Same "no generated Database type" gap as the .returns<T[]>() calls
     // above, on the write side instead — without it, insert()'s payload type
     // resolves to `never` rather than accepting an arbitrary row.
     const { data, error } = await db
       .from('cards')
-      .insert({ id, name, socials: snap ? { snap } : {} } as never)
+      .insert({ id, name, socials: snap ? { snap } : {}, owner } as never)
       .select('id,name,nickname,avatar,socials,swag,owner,created_at')
       .single<CardRow>();
 
     if (error) {
+      if (owner) await db.auth.admin.deleteUser(owner).catch(() => {});
       const taken = error.code === '23505';
       return NextResponse.json(
         { error: taken ? `@${id} is already taken.` : error.message },
