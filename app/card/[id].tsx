@@ -55,9 +55,12 @@ export default function CardSheet() {
   const knownEvent = useTagStore((s) => (event ? s.events[event] : undefined));
 
   const [card, setCard] = useState<Card | null>(person?.card ?? null);
-  const [state, setState] = useState<'loading' | 'ready' | 'missing'>(
+  const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>(
     person ? 'ready' : 'loading'
   );
+  // Bumped to retry after a network failure, distinct from a genuinely
+  // missing card — those aren't the same thing and shouldn't look the same.
+  const [attempt, setAttempt] = useState(0);
   const [awards, setAwards] = useState<Award[] | null>(null);
   const [draftNote, setDraftNote] = useState(person?.note ?? '');
   // A scan must be recorded exactly once, even though this screen re-renders.
@@ -72,6 +75,7 @@ export default function CardSheet() {
   useEffect(() => {
     if (!id || recorded.current) return;
     let cancelled = false;
+    setState((s) => (s === 'error' ? 'loading' : s));
 
     (async () => {
       try {
@@ -85,20 +89,42 @@ export default function CardSheet() {
         setState('ready');
         recorded.current = true;
         if (fromScan) setAwards(tag(found, 'scanned'));
-      } catch {
-        if (!cancelled) setState('missing');
+      } catch (err) {
+        // A thrown error means the request itself failed — offline, timed
+        // out, the server rejected it — which is not evidence the code is
+        // bad. Conflating the two is what made a friend's phone being
+        // offline for a second look identical to a code that never existed.
+        if (!cancelled) {
+          setState('error');
+          if (__DEV__) console.warn('[card] getCard failed:', err);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [id, person?.card, tag, fromScan]);
+  }, [id, person?.card, tag, fromScan, attempt]);
 
   if (state === 'loading') {
     return (
       <View style={[s.root, s.center]}>
         <ActivityIndicator color={colors.snap} />
+      </View>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <View style={[s.root, { paddingTop: insets.top + 40 }]}>
+        <Empty
+          title="Couldn't check that code"
+          body="The request didn't reach the server — a signal drop, not a bad code. Try again."
+        />
+        <View style={{ padding: 24, gap: 8 }}>
+          <Button label="Try again" onPress={() => setAttempt((a) => a + 1)} />
+          <Button label="Back to camera" variant="ghost" onPress={() => router.back()} />
+        </View>
       </View>
     );
   }
