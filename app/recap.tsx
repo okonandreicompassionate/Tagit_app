@@ -1,4 +1,3 @@
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useRef, useState } from 'react';
@@ -6,30 +5,11 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TagitMark } from '../src/components/TagitMark';
 import { Avatar, Button } from '../src/components/ui';
+import { canExportImage, captureViewAsPng } from '../src/lib/exportImage';
 import { displayName, encodeTag } from '../src/lib/payload';
 import { tierFor } from '../src/lib/swag';
 import { useMe, useStats, useTaggedList } from '../src/store/useTagStore';
 import { colors, radius } from '../src/theme';
-
-/**
- * Expo Go ships only the Expo SDK's own native modules, and react-native-view-shot
- * isn't one of them — so PNG export is unavailable while demoing through Expo Go.
- * The card itself renders identically either way; only the capture step changes,
- * and the user screenshots instead. Loaded lazily so Expo Go never touches it.
- */
-const canExportImage = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
-
-async function captureCard(ref: React.RefObject<View | null>): Promise<string | null> {
-  if (!canExportImage) return null;
-  try {
-    // Required lazily: a static import would pull the native module into the
-    // Expo Go bundle and throw on load.
-    const { captureRef } = require('react-native-view-shot') as typeof import('react-native-view-shot');
-    return await captureRef(ref, { format: 'png', quality: 1, result: 'tmpfile' });
-  } catch {
-    return null;
-  }
-}
 
 /**
  * A vertical, Story-shaped recap built to be screenshotted and reposted as a
@@ -53,7 +33,7 @@ export default function Recap() {
   const shareRecap = async () => {
     setBusy(true);
     try {
-      const uri = await captureCard(cardRef);
+      const uri = await captureViewAsPng(cardRef);
       if (uri && (await Sharing.isAvailableAsync())) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your recap' });
       } else {
