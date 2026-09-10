@@ -46,6 +46,7 @@ export default function Onboarding() {
   const [error, setError] = useState<string | null>(null);
   const [snapCheck, setSnapCheck] = useState<HandleCheck | 'checking' | null>(null);
   const [celebrate, setCelebrate] = useState(false);
+  const [syncWarning, setSyncWarning] = useState(false);
 
   const id = useMemo(() => toId(snap), [snap]);
 
@@ -98,7 +99,7 @@ export default function Onboarding() {
   };
 
   const submit = async () => {
-    if (!ready || busy || celebrate) return;
+    if (!ready || busy || celebrate || syncWarning) return;
     setBusy(true);
     setError(null);
     try {
@@ -120,7 +121,7 @@ export default function Onboarding() {
         return;
       }
       const score = Number(snapScore.replace(/[^\d]/g, ''));
-      await createMe({
+      const synced = await createMe({
         id,
         name,
         nickname,
@@ -132,10 +133,21 @@ export default function Onboarding() {
           ...(tiktok.trim() ? { tiktok: tiktok.trim().replace(/^@+/, '') } : {}),
         },
       });
-      // A brand new card is the one moment here worth celebrating — a
-      // returning user restoring theirs above just gets sent straight in.
-      setCelebrate(true);
-      setTimeout(() => router.replace('/'), 650);
+
+      if (synced) {
+        // A brand new card is the one moment here worth celebrating — a
+        // returning user restoring theirs above just gets sent straight in.
+        setCelebrate(true);
+        setTimeout(() => router.replace('/'), 650);
+      } else {
+        // Real, not blocking: the card lives on this phone either way, and
+        // trapping someone on this screen over a bad connection is worse
+        // than letting them in. But claiming success here is exactly how a
+        // friend's card went missing to everyone else — say so instead, and
+        // let the self-heal in app/index.tsx keep retrying quietly after.
+        setSyncWarning(true);
+        setTimeout(() => router.replace('/'), 2200);
+      }
     } catch {
       setError("Couldn't save your card. Check your connection and try again.");
     } finally {
@@ -221,11 +233,18 @@ export default function Onboarding() {
         </View>
 
         {error ? <Text style={s.error}>{error}</Text> : null}
+        {syncWarning ? (
+          <Text style={s.warning}>
+            You're set up — but we couldn't confirm your card reached the server yet, so people
+            scanning you might not find you for a bit. We'll keep trying quietly in the
+            background; open Tagit again later with a connection if it's still not working.
+          </Text>
+        ) : null}
 
         <Button
-          label={celebrate ? "You're in!" : busy ? 'Setting up…' : 'Make my code'}
+          label={celebrate ? "You're in!" : syncWarning ? 'Continuing…' : busy ? 'Setting up…' : 'Make my code'}
           onPress={() => void submit()}
-          disabled={!ready || busy || celebrate}
+          disabled={!ready || busy || celebrate || syncWarning}
         />
         <Text style={s.footnote}>
           Your card lives on your phone. Nothing is shared until someone scans your code.
@@ -254,5 +273,6 @@ const s = StyleSheet.create({
   },
   secondaryTitle: { ...type.label, color: colors.textDim },
   error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
+  warning: { color: colors.flame, fontSize: 13, fontWeight: '600', lineHeight: 19 },
   footnote: { fontSize: 11, color: colors.textDim, textAlign: 'center', lineHeight: 16 },
 });

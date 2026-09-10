@@ -31,6 +31,8 @@ type State = {
 };
 
 type Actions = {
+  /** Returns whether the card actually reached the server — see the doc
+   * comment on the implementation for why that's worth checking here. */
   createMe: (input: {
     name: string;
     nickname?: string;
@@ -38,7 +40,7 @@ type Actions = {
     id: string;
     socials: Partial<Record<SocialKey, string>>;
     snapScore?: number;
-  }) => Promise<void>;
+  }) => Promise<boolean>;
   updateMe: (patch: Partial<Omit<Card, 'id' | 'createdAt'>>) => Promise<void>;
   /** Records a scan in both directions and returns what it was worth. */
   tag: (card: Card, direction: LinkEvent['direction']) => Award[];
@@ -106,12 +108,25 @@ export const useTagStore = create<State & Actions>()(
           createdAt: Date.now(),
         };
         set({ me: card });
-        try {
-          await api.saveCard(card);
-        } catch (err) {
-          // Local-first: the card exists on device even if the sync fails.
-          if (__DEV__) console.warn('[store] createMe sync failed:', err);
+
+        // Local-first, still — the card exists on this phone the instant
+        // onboarding finishes, sync or no sync. But a card that never
+        // reaches the server is invisible to anyone who scans it, and
+        // nothing else finds out until this phone happens to reopen with a
+        // connection (the self-heal in app/index.tsx). Registration is the
+        // one moment worth spending a few extra seconds retrying for, so
+        // the caller can tell someone in real time rather than leaving them
+        // to discover it the way a friend already has.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await api.saveCard(card);
+            return true;
+          } catch (err) {
+            if (__DEV__) console.warn(`[store] createMe sync attempt ${attempt + 1} failed:`, err);
+            if (attempt < 2) await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          }
         }
+        return false;
       },
 
       updateMe: async (patch) => {
