@@ -40,6 +40,7 @@ export default function RootLayout() {
             <Stack.Screen name="search" options={{ presentation: 'modal' }} />
             {/* Full screen: it's an artwork feed, not a sheet. */}
             <Stack.Screen name="feed" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="ranking" options={{ presentation: 'modal' }} />
             <Stack.Screen name="recap" options={{ presentation: 'modal' }} />
             <Stack.Screen
               name="event/[id]"

@@ -9,6 +9,15 @@ export const POINTS = {
   firstAtEvent: 25,
   /** Scanning the door code. Only the verified kind pays. */
   checkIn: 20,
+  /**
+   * What hosting is worth per verified attendee — computed and applied
+   * entirely server-side (`recompute_swag_for()`), never awarded through
+   * `pointsForLink`/`pointsForCheckIn` like the rules above. Listed here so
+   * the two stay in sync, per the same convention as `checkIn` itself: a
+   * fraction of it, deliberately, so one well-attended event can't dominate
+   * the leaderboard over someone else's months of real scanning.
+   */
+  hostedAttendee: 5,
 } as const;
 
 export const TIERS = [

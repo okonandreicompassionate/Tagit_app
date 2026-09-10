@@ -165,6 +165,14 @@ export default function Feed() {
         style={[s.close, { top: insets.top + 10 }]}>
         <Text style={s.closeText}>✕</Text>
       </Pressable>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Why am I seeing this? How ranking works"
+        onPress={() => router.push('/ranking')}
+        style={[s.why, { top: insets.top + 10 }]}>
+        <Text style={s.whyText}>Why this order?</Text>
+      </Pressable>
     </View>
   );
 }
@@ -297,4 +305,15 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   closeText: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  why: {
+    position: 'absolute',
+    left: 16,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whyText: { color: colors.text, fontSize: 11.5, fontWeight: '700' },
 });
