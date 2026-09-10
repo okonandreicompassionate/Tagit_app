@@ -151,31 +151,24 @@ Depends on: §2.
 
 ---
 
-## 5b. A door code that survives being printed
+## 5b. A door code that survives being printed — done, 2026-09-10
 
 > *"event creation shld make qrs that are printable and sharable to easily go
 > round showing clearly the event name"*
 
-`app/event/door.tsx` already exists and does part of this: full-screen QR,
-event name underneath, screen forced to max brightness, Copy link and Share
-buttons. What it doesn't do is leave the phone — Share currently sends a text
-link, not an image, so there's nothing to actually print or tape to a wall.
+Built: `app/event/door.tsx` now has a Screen/Poster toggle. Screen is the
+original full-bleed QR for holding up at an entrance; Poster leads with the
+event name large, then date/place, then the code, proportioned close to
+A4/Letter. "Save / share as image" captures the poster as a PNG
+(`react-native-view-shot`, shared via the new `src/lib/exportImage.ts` —
+`app/recap.tsx` now uses the same helper instead of its own copy) and hands
+it to the OS share sheet, so "print" is whatever AirPrint/Google
+Print/Files that sheet already offers.
 
-- **Export as an image.** The same `react-native-view-shot` pattern already
-  used in `app/recap.tsx` (`captureCard`, gated behind `canExportImage` since
-  the module isn't in Expo Go) applies directly here: capture the door-code
-  view to a PNG, then `Sharing.shareAsync` it — from there "print" is just
-  whatever the OS share sheet already offers (AirPrint, Google Print, save to
-  Files/Photos and print from anywhere).
-- **Design it as a poster, not a screen.** Today the event name sits *under*
-  a QR sized for a phone display. A printable version wants the name leading
-  — large, above the code — since a flyer is read from a few feet away, not
-  held six inches from someone's face. Worth a `layout="poster"` variant of
-  the same screen rather than a second one: same data, different proportions.
-- **Surface it earlier.** Right now this is one tap deep from event detail
-  (host-only → "Show the door code"). Offering it straight from the create
-  flow — "Event made. Here's your door code" — turns a step people currently
-  have to go hunting for into part of finishing the form.
+Not done: surfacing it straight from the event-creation flow rather than one
+tap deep from event detail. Left as-is on purpose — creation already lands
+on the event detail screen immediately, and the door code button is right
+there; a forced extra screen mid-creation felt like friction, not a fix.
 
 ---
 
