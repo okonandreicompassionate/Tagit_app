@@ -1,0 +1,35 @@
+name: Deploy landing page to GitHub Pages
+
+# Publishes the landing/ folder as-is — no build step, it's already plain
+# HTML. Runs on every push to main that touches landing/, so the download
+# link and anything else there stays current without a manual redeploy.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: landing
+      - id: deployment
+        uses: actions/deploy-pages@v4
