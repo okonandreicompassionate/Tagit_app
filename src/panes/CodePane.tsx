@@ -92,12 +92,26 @@ export function CodePane({
   useEffect(() => {
     if (!active || !isLive) return;
     let cancelled = false;
+    // syncTagged is two sequential round trips — on a slow venue network a
+    // single poll can outlast the 4s interval. Without this, the next tick
+    // fires a second, overlapping syncTagged() before the first resolves.
+    let inFlight = false;
 
     const poll = async () => {
-      const fresh = await syncTagged();
-      if (cancelled || !fresh.length) return;
-      const latest = fresh.sort((a, b) => b.at - a.at)[0];
-      router.push({ pathname: '/card/[id]', params: { id: latest.card.id, incoming: '1' } });
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const fresh = await syncTagged();
+        if (cancelled || !fresh.length) return;
+        const latest = fresh.sort((a, b) => b.at - a.at)[0];
+        // IncomingLinkWatcher's Realtime push and the launch-time sync can
+        // both independently reach the same conclusion — claimed here so
+        // this poll only navigates if neither of them already has.
+        if (!useTagStore.getState().claimIncomingPopup(`${latest.card.id}:${latest.at}`)) return;
+        router.push({ pathname: '/card/[id]', params: { id: latest.card.id, incoming: '1' } });
+      } finally {
+        inFlight = false;
+      }
     };
 
     const id = setInterval(() => void poll(), 4000);

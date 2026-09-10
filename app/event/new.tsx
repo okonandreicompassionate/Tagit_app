@@ -65,7 +65,14 @@ export default function NewEvent() {
   const [city, setCity] = useState('');
   const [ticketUrl, setTicketUrl] = useState('');
   const [startsAt, setStartsAt] = useState<number | undefined>(atHour(0, 21));
-  const [endsAt, setEndsAt] = useState<number | undefined>(undefined);
+  // Stored as an offset from startsAt, not an absolute timestamp — an
+  // absolute value picked before startsAt was finalized would go stale
+  // (and silently) the moment startsAt changed again, permanently closing
+  // check-in for the whole event with no indication anything was wrong.
+  // Deriving it fresh from the current startsAt whenever it's needed means
+  // it can't ever point at the wrong start time.
+  const [endsAtHours, setEndsAtHours] = useState<number | null>(null);
+  const endsAt = startsAt && endsAtHours !== null ? startsAt + endsAtHours * 3_600_000 : undefined;
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -294,20 +301,19 @@ export default function NewEvent() {
               <View style={s.chips}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityState={{ selected: endsAt === undefined }}
-                  onPress={() => setEndsAt(undefined)}
-                  style={[s.chip, endsAt === undefined && s.chipOn]}>
-                  <Text style={[s.chipText, endsAt === undefined && s.chipTextOn]}>No cutoff</Text>
+                  accessibilityState={{ selected: endsAtHours === null }}
+                  onPress={() => setEndsAtHours(null)}
+                  style={[s.chip, endsAtHours === null && s.chipOn]}>
+                  <Text style={[s.chipText, endsAtHours === null && s.chipTextOn]}>No cutoff</Text>
                 </Pressable>
                 {CUTOFF_PRESETS.map((p) => {
-                  const value = startsAt + p.hours * 3_600_000;
-                  const on = endsAt === value;
+                  const on = endsAtHours === p.hours;
                   return (
                     <Pressable
                       key={p.label}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
-                      onPress={() => setEndsAt(value)}
+                      onPress={() => setEndsAtHours(p.hours)}
                       style={[s.chip, on && s.chipOn]}>
                       <Text style={[s.chipText, on && s.chipTextOn]}>{p.label} after start</Text>
                     </Pressable>

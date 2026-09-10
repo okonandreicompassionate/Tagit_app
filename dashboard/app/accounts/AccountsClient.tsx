@@ -28,7 +28,15 @@ export function AccountsClient() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const accounts = [...added, ...(data?.accounts ?? [])].filter((a) => !removed.has(a.id));
+  // `added` isn't pruned once the poll catches up with the same id — so
+  // dedupe here instead, keeping the locally-added copy (first occurrence)
+  // over the one the poll brings back for the same id.
+  const seenIds = new Set<string>();
+  const accounts = [...added, ...(data?.accounts ?? [])].filter((a) => {
+    if (removed.has(a.id) || seenIds.has(a.id)) return false;
+    seenIds.add(a.id);
+    return true;
+  });
 
   const create = async () => {
     setCreating(true);

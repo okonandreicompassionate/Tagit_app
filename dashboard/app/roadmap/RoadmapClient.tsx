@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePolling } from '@/lib/usePolling';
 import { Card, ErrorBanner, SectionTitle, relativeTime } from '@/lib/ui';
 import type { RoadmapItem } from '../api/roadmap/route';
@@ -31,10 +31,51 @@ export function RoadmapClient() {
   const [detail, setDetail] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  // Optimistic local state so a move/delete/add doesn't wait on the next poll.
-  const [overlay, setOverlay] = useState<RoadmapItem[] | null>(null);
+  const [actionError, setActionError] = useState<{ id: number; message: string } | null>(null);
 
-  const items = overlay ?? data?.items ?? [];
+  // Per-item patches, not a full-list snapshot — each entry is dropped the
+  // moment a poll's own data already reflects it (see the effect below), so
+  // a concurrent edit from elsewhere and this session's own optimism never
+  // permanently disagree the way a single frozen overlay would.
+  const [statusPatch, setStatusPatch] = useState<Record<number, RoadmapItem['status']>>({});
+  const [deleted, setDeleted] = useState<Set<number>>(new Set());
+  const [justCreated, setJustCreated] = useState<RoadmapItem[]>([]);
+
+  const baseItems = data?.items ?? [];
+
+  // Drop any patch the latest poll already agrees with — the only way this
+  // overlay can go stale is by living forever, so it isn't allowed to.
+  useEffect(() => {
+    if (!data) return;
+    setStatusPatch((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const [idStr, status] of Object.entries(prev)) {
+        const id = Number(idStr);
+        const real = baseItems.find((i) => i.id === id);
+        if (real && real.status === status) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    setDeleted((prev) => {
+      const stillThere = [...prev].filter((id) => baseItems.some((i) => i.id === id));
+      return stillThere.length === prev.size ? prev : new Set(stillThere);
+    });
+    setJustCreated((prev) => prev.filter((c) => !baseItems.some((i) => i.id === c.id)));
+    // baseItems is a new array identity every poll tick by design (usePolling
+    // replaces `data` wholesale) — that's exactly the signal this should run on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  const items = useMemo(() => {
+    const patched = baseItems
+      .filter((i) => !deleted.has(i.id))
+      .map((i) => (statusPatch[i.id] ? { ...i, status: statusPatch[i.id] } : i));
+    return [...justCreated, ...patched];
+  }, [baseItems, statusPatch, deleted, justCreated]);
 
   const create = async () => {
     if (title.trim().length < 1) return;
@@ -51,7 +92,7 @@ export function RoadmapClient() {
         setCreateError(body.error ?? `HTTP ${res.status}`);
         return;
       }
-      setOverlay([body.item as RoadmapItem, ...items]);
+      setJustCreated((prev) => [body.item as RoadmapItem, ...prev]);
       setTitle('');
       setDetail('');
     } catch (err) {
@@ -62,25 +103,57 @@ export function RoadmapClient() {
   };
 
   const move = async (item: RoadmapItem, status: RoadmapItem['status']) => {
-    setOverlay(items.map((i) => (i.id === item.id ? { ...i, status } : i)));
+    setActionError(null);
+    setStatusPatch((prev) => ({ ...prev, [item.id]: status }));
     try {
-      await fetch(`/api/roadmap/${item.id}`, {
+      const res = await fetch(`/api/roadmap/${item.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-    } catch {
-      // Next poll reconciles either way.
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.error) {
+        // Revert — a silently-kept optimistic move is worse than a card
+        // that snaps back with a reason why.
+        setStatusPatch((prev) => {
+          const next = { ...prev };
+          delete next[item.id];
+          return next;
+        });
+        setActionError({ id: item.id, message: body.error ?? `HTTP ${res.status}` });
+      }
+    } catch (err) {
+      setStatusPatch((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+      setActionError({ id: item.id, message: err instanceof Error ? err.message : 'Network error' });
     }
   };
 
   const remove = async (item: RoadmapItem) => {
     if (!window.confirm(`Delete "${item.title}"?`)) return;
-    setOverlay(items.filter((i) => i.id !== item.id));
+    setActionError(null);
+    setDeleted((prev) => new Set(prev).add(item.id));
     try {
-      await fetch(`/api/roadmap/${item.id}`, { method: 'DELETE' });
-    } catch {
-      // Next poll reconciles either way.
+      const res = await fetch(`/api/roadmap/${item.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setDeleted((prev) => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+        setActionError({ id: item.id, message: body.error ?? `HTTP ${res.status}` });
+      }
+    } catch (err) {
+      setDeleted((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+      setActionError({ id: item.id, message: err instanceof Error ? err.message : 'Network error' });
     }
   };
 
@@ -165,6 +238,9 @@ export function RoadmapClient() {
                         Delete
                       </button>
                     </div>
+                    {actionError?.id === item.id ? (
+                      <p className="mt-2 text-[11px] text-flame">{actionError.message}</p>
+                    ) : null}
                   </Card>
                 ))}
                 {colItems.length === 0 ? (

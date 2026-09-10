@@ -28,6 +28,17 @@ type State = {
   hydrated: boolean;
   /** Anything after this is "new" for the notifications badge. */
   lastSeenNotificationsAt: number;
+  /**
+   * Keys (`${cardId}:${at}`) of incoming scans already routed to the
+   * takeover popup this session. Three independent things can notice the
+   * same scan — Realtime (IncomingLinkWatcher), CodePane's poll fallback,
+   * and the launch-time sync — each racing an async round trip against its
+   * own snapshot of `tagged`, so none of them alone can reliably tell "is
+   * this new" without a shared, synchronous point of truth. Session-only,
+   * not persisted: it only needs to survive the seconds between two
+   * detectors racing, not across app restarts.
+   */
+  shownIncoming: Set<string>;
 };
 
 type Actions = {
@@ -70,6 +81,10 @@ type Actions = {
    */
   syncTagged: () => Promise<{ card: Card; at: number }[]>;
   markNotificationsSeen: () => void;
+  /** Atomically checks-and-marks an incoming-scan key as shown. Returns
+   * true the first time a key is seen (go ahead and show the popup), false
+   * on every call after (something else already claimed it). */
+  claimIncomingPopup: (key: string) => boolean;
   clearAwards: () => void;
   setNote: (cardId: string, note: string) => void;
   markAddedOnSnap: (cardId: string) => void;
@@ -89,6 +104,7 @@ const initial: State = {
   lastAwards: null,
   hydrated: false,
   lastSeenNotificationsAt: 0,
+  shownIncoming: new Set(),
 };
 
 export const useTagStore = create<State & Actions>()(
@@ -301,6 +317,23 @@ export const useTagStore = create<State & Actions>()(
             get().receiveLink(card, { eventId: row.event_id ?? undefined, at, direction: row.direction });
           }
 
+          // A fresh incoming scan just changed this card's own swag total
+          // server-side (the mirror trigger's points, same as any other
+          // link). IncomingLinkWatcher already refetches for exactly this
+          // reason when Realtime catches a scan live — this is the same fix
+          // for the two callers that only ever learn about one through this
+          // function (CodePane's poll, and the launch-time sync), which
+          // otherwise never touch `me` and would leave its swag stale until
+          // something unrelated happened to refresh it.
+          if (freshIncoming.length) {
+            try {
+              const mine = await api.getCard(me.id);
+              if (mine) get().adoptCard(mine);
+            } catch {
+              // Not worth failing the sync over; swag catches up next time.
+            }
+          }
+
           return freshIncoming;
         } catch (err) {
           if (__DEV__) console.warn('[store] syncTagged failed:', err);
@@ -311,6 +344,21 @@ export const useTagStore = create<State & Actions>()(
       clearAwards: () => set({ lastAwards: null }),
 
       markNotificationsSeen: () => set({ lastSeenNotificationsAt: Date.now() }),
+
+      claimIncomingPopup: (key) => {
+        const { shownIncoming } = get();
+        if (shownIncoming.has(key)) return false;
+        // A fresh Set, not a mutation of the existing one — this runs from
+        // more than one caller in close succession, and a mutated-in-place
+        // Set would still correctly dedupe here (this action is itself
+        // synchronous, no race within it), but replacing it keeps the same
+        // "always a new object" contract every other action in this store
+        // follows.
+        const next = new Set(shownIncoming);
+        next.add(key);
+        set({ shownIncoming: next });
+        return true;
+      },
 
       setNote: (cardId, note) => {
         const person = get().tagged[cardId];
@@ -344,7 +392,7 @@ export const useTagStore = create<State & Actions>()(
 
       setActiveEvent: (eventId) => set({ activeEventId: eventId }),
 
-      reset: () => set({ ...initial, hydrated: true }),
+      reset: () => set({ ...initial, shownIncoming: new Set(), hydrated: true }),
     }),
     {
       name: 'tag-store-v2',
@@ -360,6 +408,15 @@ export const useTagStore = create<State & Actions>()(
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error && __DEV__) console.warn('[store] rehydrate failed:', error);
+        // 0 (the field's default before it ever existed) reads as "every
+        // scan ever" is unseen — every install that had Tagged history
+        // before this field shipped would open to a meaningless full-badge
+        // notification count. A fresh install has nothing to falsely hide
+        // either way, so it's safe to just stamp "now" the first time this
+        // is seen, real history or none.
+        if (state && state.lastSeenNotificationsAt === 0) {
+          useTagStore.setState({ lastSeenNotificationsAt: Date.now() });
+        }
         useTagStore.setState({ hydrated: true });
       },
     }

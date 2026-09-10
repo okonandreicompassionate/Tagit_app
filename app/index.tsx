@@ -113,7 +113,12 @@ export default function Home() {
       const recent = fresh.filter((f) => Date.now() - f.at < RECENT_SCAN_MS);
       if (alive && recent.length) {
         const latest = recent.sort((a, b) => b.at - a.at)[0];
-        router.push({ pathname: '/card/[id]', params: { id: latest.card.id, incoming: '1' } });
+        // IncomingLinkWatcher's Realtime push and CodePane's poll can both
+        // independently reach the same conclusion — claimed here so this
+        // only navigates if neither of them already has.
+        if (useTagStore.getState().claimIncomingPopup(`${latest.card.id}:${latest.at}`)) {
+          router.push({ pathname: '/card/[id]', params: { id: latest.card.id, incoming: '1' } });
+        }
       }
     })();
 

@@ -69,11 +69,19 @@ export function IncomingLinkWatcher() {
               if (!card) return;
 
               const eventId = row.event_id ?? undefined;
+              const at = row.created_at ? new Date(row.created_at).getTime() : Date.now();
               receiveLink(card, {
                 eventId,
                 eventName: eventId ? rememberedEvents[eventId]?.name : undefined,
-                at: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+                at,
               });
+
+              // CodePane's poll fallback and the launch-time sync can both
+              // independently notice the same scan (mirror_link() gives the
+              // mirrored row the exact same created_at as this one, so the
+              // key matches whichever of them gets there first) — claimed
+              // here so at most one of the three ever actually navigates.
+              if (!useTagStore.getState().claimIncomingPopup(`${card.id}:${at}`)) return;
 
               // No `scan=1`: the link is already recorded on both sides, so
               // this only opens their profile. `incoming=1` is what makes the
