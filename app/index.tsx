@@ -41,6 +41,13 @@ export default function Home() {
   // null = still checking. Rendering the app before this resolves would flash
   // onboarding at someone who is already signed in.
   const [signedIn, setSignedIn] = useState<boolean | null>(isLive ? null : false);
+  // Separate from `me`: signing in on a new device is real, live-loaded uid
+  // first, local `me` second — without this, a signed-in user with no local
+  // card yet (the exact shape of "restoring on a new device") would see
+  // `!me` true for the one render before myCard() resolves and bounce
+  // straight to onboarding, as if they were new. Starts true so the gate
+  // below waits for the first real answer rather than racing it.
+  const [restoring, setRestoring] = useState(true);
   const [tab, setTab] = useState<number>(CAMERA);
 
   useEffect(() => {
@@ -67,9 +74,15 @@ export default function Home() {
           }
         } catch {
           // Offline. Onboarding still resolves the handle as "yours".
+          if (alive) setRestoring(false);
           return;
         }
       }
+      // Settled either way — already had a card locally, just restored one,
+      // or confirmed there genuinely isn't one. Only past this point is
+      // "no card" trustworthy enough to act on by sending someone to
+      // onboarding instead of quietly losing them mid-restore.
+      if (alive) setRestoring(false);
 
       // A card exists locally the moment onboarding finishes, whether or not
       // it actually reached the server — local-first, on purpose, so signup
@@ -128,7 +141,7 @@ export default function Home() {
   }, [me, adoptCard, syncTagged, router, activeEventId, setActiveEvent]);
 
   // Hooks first, then the gates.
-  if (signedIn === null) {
+  if (signedIn === null || (isLive && signedIn && restoring)) {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={colors.snap} />
