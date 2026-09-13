@@ -2,12 +2,16 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StreakFlame } from '../src/components/Badges';
 import { Avatar, Empty } from '../src/components/ui';
 import { listFriends, type Friend } from '../src/lib/friends';
 import { displayName } from '../src/lib/payload';
+import { streakAlive, streakExpiresIn } from '../src/lib/swag';
 import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors, type } from '../src/theme';
 import type { Card } from '../src/types';
+
+type StreakWarning = { card: Card; streak: number; daysLeft: number };
 
 type Item = { key: string; card: Card; at: number; text: string; unread: boolean };
 
@@ -71,6 +75,20 @@ export default function Notifications() {
     return [...scans, ...asks].sort((a, b) => b.at - a.at);
   }, [tagged, requests, lastSeen]);
 
+  // A streak lapsing isn't a discrete event with a timestamp the way a scan
+  // or a request is — it's a standing state that's either fine or urgent —
+  // so it gets its own section above the feed instead of a row mixed into
+  // it. Same 3-day "urgent" threshold StreakFlame already uses elsewhere,
+  // so a flame that reads red here means the same thing it does everywhere
+  // else in the app.
+  const streakWarnings = useMemo<StreakWarning[]>(() => {
+    return Object.values(tagged)
+      .filter((p) => p.streak >= 2 && streakAlive(p.links))
+      .map((p) => ({ card: p.card, streak: p.streak, daysLeft: streakExpiresIn(p.links) }))
+      .filter((w): w is StreakWarning => w.daysLeft != null && w.daysLeft <= 3)
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [tagged]);
+
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
@@ -85,8 +103,38 @@ export default function Notifications() {
         data={items}
         keyExtractor={(item) => item.key}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24, paddingTop: 4 }}
+        ListHeaderComponent={
+          streakWarnings.length ? (
+            <View style={s.streakSection}>
+              <Text style={s.sectionLabel}>STREAKS ENDING SOON</Text>
+              {streakWarnings.map((w) => (
+                <Pressable
+                  key={w.card.id}
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/card/${w.card.id}`)}
+                  style={({ pressed }) => [s.row, pressed && { backgroundColor: colors.surfaceHi }]}>
+                  <Avatar uri={w.card.avatar} name={w.card.name} size={46} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={s.name} numberOfLines={1}>
+                      {displayName(w.card)}
+                    </Text>
+                    <Text style={s.text}>
+                      Expires in {w.daysLeft} day{w.daysLeft === 1 ? '' : 's'} — tag them again to
+                      keep it
+                    </Text>
+                  </View>
+                  <StreakFlame count={w.streak} alive expiresIn={w.daysLeft} />
+                </Pressable>
+              ))}
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          <Empty title="Nothing yet" body="Scans and friend requests show up here." />
+          // Skipped when there are streak warnings — "nothing yet" would be
+          // wrong sitting right under a section that isn't empty.
+          streakWarnings.length ? null : (
+            <Empty title="Nothing yet" body="Scans and friend requests show up here." />
+          )
         }
         renderItem={({ item }) => (
           <Pressable
@@ -113,6 +161,19 @@ export default function Notifications() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  streakSection: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    ...type.label,
+    color: colors.textDim,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
