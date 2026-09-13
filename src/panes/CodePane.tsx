@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TierProgress } from '../components/Badges';
+import { Glass } from '../components/Glass';
 import { Snapcode } from '../components/Snapcode';
 import { TagCode } from '../components/TagCode';
 import { Button, Stat } from '../components/ui';
@@ -181,6 +182,7 @@ export function CodePane({
                 accessibilityState={{ selected: on }}
                 onPress={() => setShowSnapcode(opt.key)}
                 style={[s.switchBtn, on && s.switchBtnOn]}>
+                {!on ? <Glass style={StyleSheet.absoluteFill} radius={radius.md} intensity={30} /> : null}
                 <Text style={[s.switchLabel, on && s.switchLabelOn]}>{opt.label}</Text>
                 <Text style={[s.switchSub, on && s.switchSubOn]}>{opt.sub}</Text>
               </Pressable>
@@ -269,6 +271,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     gap: 1,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   switchBtnOn: { backgroundColor: colors.snap, borderColor: colors.snap },
   switchLabel: { fontSize: 13, fontWeight: '800', color: colors.textDim },

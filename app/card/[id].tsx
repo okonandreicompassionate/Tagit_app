@@ -183,7 +183,7 @@ export default function CardSheet() {
 
         {isIncoming ? (
           <View style={s.incomingBanner}>
-            <Text style={s.incomingText}>🎉 {displayName(card)} just scanned you</Text>
+            <Text style={s.incomingText}>{displayName(card)} just scanned you</Text>
           </View>
         ) : null}
 
