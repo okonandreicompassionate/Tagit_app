@@ -11,6 +11,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { Glass } from './Glass';
 import { colors, radius, type } from '../theme';
 
 export function Avatar({
@@ -69,9 +70,15 @@ export function Button({
   disabled?: boolean;
   style?: ViewStyle;
 }) {
+  // "dark" is the one variant that reads as a real surface rather than a
+  // flat fill or nothing at all — glass, same as everywhere else that's
+  // floating over something. "ghost" stays deliberately minimal (text and a
+  // hairline only) so the hierarchy — snap > dark > ghost — still reads at
+  // a glance.
+  const isGlass = variant === 'dark';
   const palette = {
     snap: { bg: colors.snap, fg: colors.snapInk, border: colors.snap },
-    dark: { bg: colors.surfaceHi, fg: colors.text, border: colors.border },
+    dark: { bg: 'transparent', fg: colors.text, border: 'rgba(255,255,255,0.12)' },
     ghost: { bg: 'transparent', fg: colors.text, border: colors.border },
     danger: { bg: 'transparent', fg: colors.danger, border: colors.border },
   }[variant];
@@ -89,12 +96,13 @@ export function Button({
       style={({ pressed }) => [
         s.btn,
         {
-          backgroundColor: palette.bg,
+          backgroundColor: isGlass ? 'transparent' : palette.bg,
           borderColor: palette.border,
           opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
         },
         style,
       ]}>
+      {isGlass ? <Glass style={StyleSheet.absoluteFill} radius={radius.pill} intensity={30} /> : null}
       {icon}
       <Text style={[s.btnLabel, { color: palette.fg }]} numberOfLines={1}>
         {label}

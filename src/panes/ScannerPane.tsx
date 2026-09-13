@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { Glass } from '../components/Glass';
 import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { MOCK_CARDS } from '../lib/mock';
 import { cancelNfc, isNfcAvailable, readTagUrl } from '../lib/nfc';
@@ -176,6 +177,7 @@ export function ScannerPane({
           accessibilityLabel={event ? `Event: ${event.name}` : 'Join an event'}
           onPress={() => router.push('/events')}
           style={s.eventChip}>
+          <Glass style={StyleSheet.absoluteFill} radius={radius.pill} intensity={35} />
           <Text style={s.eventText} numberOfLines={1}>
             {event ? `● ${event.name}` : '+ Join event'}
           </Text>
@@ -197,7 +199,8 @@ export function ScannerPane({
           accessibilityLabel="Leaderboard"
           onPress={() => router.push('/leaderboard')}
           style={s.iconBtn}>
-          <Text style={s.icon}>🏆</Text>
+          <Glass style={StyleSheet.absoluteFill} radius={20} intensity={35} />
+          <TrophyIcon color={colors.text} />
         </Pressable>
 
         <Pressable
@@ -205,6 +208,7 @@ export function ScannerPane({
           accessibilityLabel={unseen > 0 ? `Notifications, ${unseen} new` : 'Notifications'}
           onPress={() => router.push('/notifications')}
           style={s.iconBtn}>
+          <Glass style={StyleSheet.absoluteFill} radius={20} intensity={35} />
           <BellIcon color={colors.text} />
           {unseen > 0 ? <View style={s.badge} /> : null}
         </Pressable>
@@ -220,9 +224,8 @@ export function ScannerPane({
           accessibilityLabel="Tap an NFC sticker or card instead"
           onPress={() => void tapToScan()}
           style={s.tapBtn}>
-          <Text style={s.tapText}>
-            {tapping ? 'Hold near the sticker…' : '⌁  or tap a sticker'}
-          </Text>
+          <Glass style={StyleSheet.absoluteFill} radius={radius.pill} intensity={40} />
+          <Text style={s.tapText}>{tapping ? 'Hold near the sticker…' : 'or tap a sticker'}</Text>
         </Pressable>
       ) : null}
 
@@ -234,6 +237,7 @@ export function ScannerPane({
             accessibilityRole="button"
             onPress={() => handleCode(MOCK_CARDS[Math.floor(Math.random() * MOCK_CARDS.length)].id)}
             style={s.devBtn}>
+            <Glass style={StyleSheet.absoluteFill} radius={radius.pill} intensity={40} />
             <Text style={s.devText}>DEV · fake a scan</Text>
           </Pressable>
         ) : null}
@@ -251,14 +255,12 @@ export function ScannerPane({
               torch && s.iconBtnOn,
               facing === 'front' && { opacity: 0.35 },
             ]}>
-            <Text style={s.icon}>{torch ? '🔆' : '🔅'}</Text>
+            {!torch ? <Glass style={StyleSheet.absoluteFill} radius={20} intensity={35} /> : null}
+            <FlashIcon color={torch ? colors.snapInk : colors.text} on={torch} />
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Flip camera"
-            onPress={flip}
-            style={s.iconBtn}>
-            <Text style={s.icon}>🔄</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Flip camera" onPress={flip} style={s.iconBtn}>
+            <Glass style={StyleSheet.absoluteFill} radius={20} intensity={35} />
+            <FlipCameraIcon color={colors.text} />
           </Pressable>
         </View>
       </View>
@@ -276,6 +278,53 @@ function TicketIcon({ color }: { color: string }) {
         strokeLinejoin="round"
       />
       <Path d="M14 7.5v9" stroke={color} strokeWidth={1.7} strokeDasharray="2.4 2.4" />
+    </Svg>
+  );
+}
+
+function TrophyIcon({ color }: { color: string }) {
+  return (
+    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
+      <Path d="M7 4h10v4a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+      <Path
+        d="M7 5.2H4.7A2 2 0 0 0 6.6 8.7M17 5.2h2.3a2 2 0 0 1-1.9 3.5"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M12 13v2.6M9.3 19h5.4c0-1.9-1-2.6-1.3-3.4h-2.8c-.3.8-1.3 1.5-1.3 3.4Z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+/** Filled while the torch is on, outline while it's off — same shape either way. */
+function FlashIcon({ color, on }: { color: string; on: boolean }) {
+  return (
+    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M13 3 5 14h5l-1 7 8-11h-5l1-7Z"
+        stroke={color}
+        strokeWidth={on ? 0 : 1.7}
+        fill={on ? color : 'none'}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function FlipCameraIcon({ color }: { color: string }) {
+  return (
+    <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 9a8 8 0 0 1 13.8-4.6L20 7" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+      <Path d="M20 3.6V7h-3.4" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M20 15a8 8 0 0 1-13.8 4.6L4 17" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+      <Path d="M4 20.4V17h3.4" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -314,12 +363,12 @@ const s = StyleSheet.create({
     flex: 1,
     height: 34,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: 1,
     borderColor: colors.snap,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
+    overflow: 'hidden',
   },
   eventText: { color: colors.snap, fontSize: 12, fontWeight: '800' },
   feedBtn: {
@@ -336,10 +385,10 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    overflow: 'hidden',
   },
   iconBtnOn: { backgroundColor: colors.snap },
   badge: {
@@ -362,10 +411,9 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.snap,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    overflow: 'hidden',
   },
   tapText: { color: colors.snap, fontSize: 13, fontWeight: '800' },
-  icon: { fontSize: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   bottom: { position: 'absolute', bottom: 0, left: 0, right: 0, gap: 12, paddingHorizontal: 16 },
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28 },
@@ -376,7 +424,7 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    overflow: 'hidden',
   },
   devText: { color: colors.textDim, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
 });

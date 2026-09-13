@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Glass } from '../src/components/Glass';
 import { CodePane } from '../src/panes/CodePane';
 import { ScannerPane } from '../src/panes/ScannerPane';
 import { TaggedPane } from '../src/panes/TaggedPane';
@@ -167,7 +168,7 @@ export default function Home() {
         <CodePane active={tab === CODE} onBackToCamera={() => setTab(CAMERA)} />
       </View>
 
-      <View style={[s.bar, { paddingBottom: insets.bottom + 16 }]}>
+      <Glass radius={0} intensity={50} style={[s.bar, { paddingBottom: insets.bottom + 16 }]}>
         <TabButton
           label="Tagged"
           active={tab === TAGGED}
@@ -186,7 +187,7 @@ export default function Home() {
           onPress={() => setTab(CODE)}
           icon={(c) => <CodeIcon color={c} />}
         />
-      </View>
+      </Glass>
     </View>
   );
 }
@@ -272,9 +273,6 @@ const s = StyleSheet.create({
     bottom: 0,
     flexDirection: 'row',
     minHeight: TAB_BAR_HEIGHT,
-    backgroundColor: 'rgba(0,0,0,0.78)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
     paddingTop: 14,
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 44 },
