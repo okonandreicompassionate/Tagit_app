@@ -6,12 +6,10 @@ import { StreakFlame } from '../src/components/Badges';
 import { Avatar, Empty } from '../src/components/ui';
 import { listFriends, type Friend } from '../src/lib/friends';
 import { displayName } from '../src/lib/payload';
-import { streakAlive, streakExpiresIn } from '../src/lib/swag';
+import { streaksEndingSoon } from '../src/lib/swag';
 import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors, type } from '../src/theme';
 import type { Card } from '../src/types';
-
-type StreakWarning = { card: Card; streak: number; daysLeft: number };
 
 type Item = { key: string; card: Card; at: number; text: string; unread: boolean };
 
@@ -81,13 +79,7 @@ export default function Notifications() {
   // it. Same 3-day "urgent" threshold StreakFlame already uses elsewhere,
   // so a flame that reads red here means the same thing it does everywhere
   // else in the app.
-  const streakWarnings = useMemo<StreakWarning[]>(() => {
-    return Object.values(tagged)
-      .filter((p) => p.streak >= 2 && streakAlive(p.links))
-      .map((p) => ({ card: p.card, streak: p.streak, daysLeft: streakExpiresIn(p.links) }))
-      .filter((w): w is StreakWarning => w.daysLeft != null && w.daysLeft <= 3)
-      .sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [tagged]);
+  const streakWarnings = useMemo(() => streaksEndingSoon(Object.values(tagged)), [tagged]);
 
   return (
     <View style={s.root}>

@@ -1,4 +1,4 @@
-import type { LinkEvent, TagEvent, TaggedPerson } from '../types';
+import type { Card, LinkEvent, TagEvent, TaggedPerson } from '../types';
 
 /** Points are awarded once per rule per link — see `pointsForLink`. */
 export const POINTS = {
@@ -83,6 +83,28 @@ export function streakExpiresIn(links: LinkEvent[], now = Date.now()): number | 
   const last = Math.max(...links.map((l) => l.at));
   const left = STREAK_WINDOW_DAYS - (dayOf(now) - dayOf(last));
   return left > 0 ? left : null;
+}
+
+export type StreakWarning = { card: Card; streak: number; daysLeft: number };
+
+/**
+ * Anyone whose streak is alive but close to lapsing — pulled out of
+ * app/notifications.tsx so the "which streaks are urgent" rule is a plain,
+ * testable function rather than logic buried inside a component. Same 2+
+ * threshold PersonRow/StreakFlame already use to bother showing a streak at
+ * all, and the same window streakExpiresIn/streakAlive already define —
+ * nothing new here, just named and exported.
+ */
+export function streaksEndingSoon(
+  people: TaggedPerson[],
+  withinDays = 3,
+  now = Date.now()
+): StreakWarning[] {
+  return people
+    .filter((p) => p.streak >= 2 && streakAlive(p.links, now))
+    .map((p) => ({ card: p.card, streak: p.streak, daysLeft: streakExpiresIn(p.links, now) }))
+    .filter((w): w is StreakWarning => w.daysLeft != null && w.daysLeft <= withinDays)
+    .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
 export type Award = { rule: keyof typeof POINTS; points: number; label: string };

@@ -12,6 +12,7 @@ import {
   pointsForLink,
   streakAlive,
   streakFrom,
+  streaksEndingSoon,
   tierFor,
   totalPoints,
 } from '../swag.ts';
@@ -86,6 +87,47 @@ test('a gap past the window resets the streak', () => {
   assert.equal(streakFrom([link(90), link(60), link(1)]), 1);
   assert.equal(streakAlive([link(90)]), false);
   assert.equal(streakAlive([link(2)]), true);
+});
+
+/* ---- notifications: streaks ending soon ---- */
+
+test('only an alive streak within the warning window is surfaced', () => {
+  const closeToLapsing = person([link(35), link(28)]); // 2 days left
+  const [warning] = streaksEndingSoon([closeToLapsing]);
+  assert.ok(warning);
+  assert.equal(warning.daysLeft, 2);
+  assert.equal(warning.streak, 2);
+});
+
+test('a fresh streak with plenty of runway is not a warning', () => {
+  const fine = person([link(3), link(0)]); // 30 days left
+  assert.deepEqual(streaksEndingSoon([fine]), []);
+});
+
+test('a single meeting is not a streak yet, however soon it could lapse', () => {
+  // One link, 28 days old: streakFrom is 1 (nothing to compare it against),
+  // so this must never appear even though it's "close" by the day count —
+  // same >=2 gate StreakFlame uses to decide whether to render at all.
+  const oneScan = person([link(28)]);
+  assert.equal(oneScan.streak, 1);
+  assert.deepEqual(streaksEndingSoon([oneScan]), []);
+});
+
+test('a streak that already lapsed is not a warning — it is just gone', () => {
+  const dead = person([link(70), link(40)]);
+  assert.equal(streakAlive(dead.links), false);
+  assert.deepEqual(streaksEndingSoon([dead]), []);
+});
+
+test('multiple warnings sort soonest-to-lapse first', () => {
+  const in1Day = person([link(31), link(29)]);
+  const in3Days = person([link(33), link(27)]);
+  const in2Days = person([link(32), link(28)]);
+  const sorted = streaksEndingSoon([in3Days, in1Day, in2Days]);
+  assert.deepEqual(
+    sorted.map((w) => w.daysLeft),
+    [1, 2, 3]
+  );
 });
 
 /* ---- points ---- */
