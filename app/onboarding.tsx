@@ -15,6 +15,7 @@ import { Confetti } from '../src/components/Confetti';
 import { TagitLockup } from '../src/components/TagitMark';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { checkHandle, claimCard } from '../src/lib/account';
+import { loginWithSnapchat, SNAP_LOGIN_AVAILABLE } from '../src/lib/snapLogin';
 import { checkHandleFormat, NO_SCRAPING, verifyHandle, type HandleCheck } from '../src/lib/snapchat';
 import { SOCIALS } from '../src/lib/socials';
 import { useTagStore } from '../src/store/useTagStore';
@@ -47,6 +48,7 @@ export default function Onboarding() {
   const [snapCheck, setSnapCheck] = useState<HandleCheck | 'checking' | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [syncWarning, setSyncWarning] = useState(false);
+  const [snapLoginBusy, setSnapLoginBusy] = useState(false);
 
   const id = useMemo(() => toId(snap), [snap]);
 
@@ -78,6 +80,22 @@ export default function Onboarding() {
     if (result.status === 'valid' && result.displayName && !name.trim()) {
       setName(result.displayName);
     }
+  };
+
+  /**
+   * The one thing Login Kit is actually good for here: skip retyping a name
+   * Snapchat already knows, with an official avatar instead of a picked
+   * photo. It does NOT supply a handle — Login Kit's scopes never include
+   * one (see src/lib/snapLogin.ts) — so the Snapchat handle field below
+   * still has to be typed by hand either way.
+   */
+  const continueWithSnapchat = async () => {
+    if (snapLoginBusy) return;
+    setSnapLoginBusy(true);
+    const profile = await loginWithSnapchat();
+    if (profile?.displayName && !name.trim()) setName(profile.displayName);
+    if (profile?.bitmojiAvatarUrl && !avatar) setAvatar(profile.bitmojiAvatarUrl);
+    setSnapLoginBusy(false);
   };
 
   const snapHint = (() => {
@@ -190,6 +208,15 @@ export default function Onboarding() {
           <Avatar uri={avatar} name={name || '?'} size={84} ring={colors.snap} />
           <Text style={s.avatarHint}>{avatar ? 'Change photo' : 'Add a photo'}</Text>
         </Pressable>
+
+        {SNAP_LOGIN_AVAILABLE ? (
+          <Button
+            label={snapLoginBusy ? 'Opening Snapchat…' : 'Continue with Snapchat'}
+            variant="snap"
+            onPress={() => void continueWithSnapchat()}
+            disabled={snapLoginBusy}
+          />
+        ) : null}
 
         <View style={{ gap: 16 }}>
           <Field

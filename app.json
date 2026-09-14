@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tagit",
     "slug": "tag",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "scheme": "tagit",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -109,7 +109,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#0A0A09"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
