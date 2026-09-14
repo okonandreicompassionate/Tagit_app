@@ -210,6 +210,10 @@ export default function EditCard() {
                 : 'Backend: connected · unclaimed (enable anonymous sign-in to lock it)'}
         </Text>
 
+        <Pressable accessibilityRole="button" onPress={() => router.push('/blocked')} style={{ padding: 10 }}>
+          <Text style={s.blockedLink}>Manage blocked people</Text>
+        </Pressable>
+
         <Pressable
           accessibilityRole="button"
           onPress={confirmReset}
@@ -240,5 +244,6 @@ const s = StyleSheet.create({
   panelTitle: { ...type.label, color: colors.textDim },
   idNote: { fontSize: 11, color: colors.textDim, fontWeight: '600' },
   backend: { fontSize: 11, color: colors.textDim, textAlign: 'center' },
+  blockedLink: { color: colors.textDim, fontSize: 13, fontWeight: '700', textAlign: 'center' },
   reset: { color: colors.danger, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 });

@@ -271,9 +271,22 @@ export default function CardSheet() {
           ) : null}
         </View>
 
-        <Pressable accessibilityRole="button" onPress={confirmRemove} style={s.remove}>
-          <Text style={s.removeText}>Remove from Tagged</Text>
-        </Pressable>
+        <View style={s.secondaryActions}>
+          <Pressable accessibilityRole="button" onPress={confirmRemove} style={s.remove}>
+            <Text style={s.removeText}>Remove from Tagged</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/report',
+                params: { card: card.id, name: displayName(card) },
+              })
+            }
+            style={s.remove}>
+            <Text style={s.reportText}>Report or block</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {awards ? (
@@ -357,8 +370,10 @@ const s = StyleSheet.create({
     textAlignVertical: 'top',
   },
   historyLine: { fontSize: 12, color: colors.textDim, fontWeight: '600' },
+  secondaryActions: { flexDirection: 'row', justifyContent: 'center', gap: 4 },
   remove: { alignSelf: 'center', padding: 10 },
   removeText: { color: colors.danger, fontSize: 13, fontWeight: '700' },
+  reportText: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
   toast: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   footer: {
     position: 'absolute',
