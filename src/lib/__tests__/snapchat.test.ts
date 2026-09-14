@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  checkHandleFormat,
   cleanHandle,
   looksLikeHandle,
   parseDisplayName,
@@ -37,6 +38,13 @@ test('urls are built against the cleaned handle and escaped', () => {
   assert.ok(snapcodeUrl('x', 600).includes('size=600'));
   assert.ok(snapcodeUrl('x').includes('type=PNG'), 'PNG renders with a plain Image');
   assert.equal(snapProfileUrl('@Tolu'), 'https://www.snapchat.com/add/tolu');
+});
+
+test('the NO_SCRAPING check reports shape, never existence', () => {
+  assert.deepEqual(checkHandleFormat('bigsho_'), { status: 'format-ok' });
+  assert.deepEqual(checkHandleFormat('@BigSho_'), { status: 'format-ok' }, 'normalised first');
+  assert.deepEqual(checkHandleFormat('1abc'), { status: 'format-bad' });
+  assert.deepEqual(checkHandleFormat('ab'), { status: 'format-bad' });
 });
 
 /* ---- display name parsing ---- */

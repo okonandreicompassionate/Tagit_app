@@ -15,7 +15,7 @@ import { Confetti } from '../src/components/Confetti';
 import { TagitLockup } from '../src/components/TagitMark';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { checkHandle, claimCard } from '../src/lib/account';
-import { verifyHandle, type HandleCheck } from '../src/lib/snapchat';
+import { checkHandleFormat, NO_SCRAPING, verifyHandle, type HandleCheck } from '../src/lib/snapchat';
 import { SOCIALS } from '../src/lib/socials';
 import { useTagStore } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
@@ -56,12 +56,19 @@ export default function Onboarding() {
    * important action — the Add on Snap button — and nobody finds out until
    * someone can't add them.
    *
+   * NO_SCRAPING builds skip the fetch entirely and fall back to a shape-only
+   * check — see checkHandleFormat in lib/snapchat.ts for why.
+   *
    * Never blocks: an unreachable check leaves the user free to continue.
    */
   const checkSnap = async () => {
     const handle = snap.trim();
     if (!handle) {
       setSnapCheck(null);
+      return;
+    }
+    if (NO_SCRAPING) {
+      setSnapCheck(checkHandleFormat(handle));
       return;
     }
     setSnapCheck('checking');
@@ -81,6 +88,8 @@ export default function Onboarding() {
         : '✓ That Snapchat account exists';
     }
     if (snapCheck?.status === 'not-found') return '✗ No Snapchat account with that handle';
+    if (snapCheck?.status === 'format-ok') return "Looks right — type it exactly as it is on Snapchat";
+    if (snapCheck?.status === 'format-bad') return 'Handles are usually lowercase letters, numbers, . _ -';
     if (id) return `Your code will be tagit.app/u/${id}`;
     return 'This is the anchor of your card';
   })();

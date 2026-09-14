@@ -58,6 +58,8 @@
     "db:status": "supabase migration list",
     "build:android": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile preview",
+    "build:review:android": "eas build --platform android --profile review",
+    "build:review:ios": "eas build --platform ios --profile review",
     "prebuild": "expo prebuild --clean",
     "icons": "node scripts/make-icons.mjs",
     "link:apk": "node scripts/update-download-link.mjs"

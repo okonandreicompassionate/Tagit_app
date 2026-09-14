@@ -20,6 +20,17 @@
  * block someone from finishing onboarding.
  */
 
+/**
+ * True in the build meant for Snap/App Store review, where the two
+ * unofficial calls below — `verifyHandle`'s fetch of the public profile page,
+ * and its scrape of that page's HTML for a display name — are exactly the
+ * thing being avoided. Set EXPO_PUBLIC_NO_SNAP_SCRAPING=1 for that build only;
+ * leaving it unset keeps every existing install on exactly today's behaviour.
+ * `snapcodeUrl` is untouched by this flag — it renders an image, it doesn't
+ * parse a page, so it isn't scraping in the sense Snap's review cares about.
+ */
+export const NO_SCRAPING = process.env.EXPO_PUBLIC_NO_SNAP_SCRAPING === '1';
+
 export const cleanHandle = (h: string) =>
   h.trim().replace(/^@+/, '').replace(/\s+/g, '').toLowerCase();
 
@@ -44,7 +55,25 @@ export type HandleCheck =
   /** Snapchat says no such account — almost always a typo. */
   | { status: 'not-found' }
   /** Couldn't tell: offline, timed out, or the page changed shape. */
-  | { status: 'unknown' };
+  | { status: 'unknown' }
+  /**
+   * NO_SCRAPING only: the handle is shaped like a real one, but nothing was
+   * sent to Snapchat to confirm it exists — there is no way to check that
+   * without the fetch this build deliberately doesn't make. Kept distinct
+   * from `valid` so the UI never claims a verification that didn't happen.
+   */
+  | { status: 'format-ok' }
+  /** NO_SCRAPING only: doesn't look like a Snapchat handle at all — this one
+   * needs no network call either way, so it's worth still catching. */
+  | { status: 'format-bad' };
+
+/**
+ * The NO_SCRAPING equivalent of `verifyHandle` — shape only, no request.
+ * Never wrong in the way a scrape can be (a changed page, a false negative);
+ * just less able to catch a handle that's well-formed but doesn't exist.
+ */
+export const checkHandleFormat = (handle: string): HandleCheck =>
+  looksLikeHandle(handle) ? { status: 'format-ok' } : { status: 'format-bad' };
 
 /**
  * Best-effort display name. Deliberately tries several shapes and gives up

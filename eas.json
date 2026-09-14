@@ -34,6 +34,21 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://sqwpgyoosurewekiwipt.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_JOBnpffTj2iQskUAWGjhXQ_JsBPfZRY"
       }
+    },
+    "review": {
+      "distribution": "internal",
+      "channel": "review",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sqwpgyoosurewekiwipt.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_JOBnpffTj2iQskUAWGjhXQ_JsBPfZRY",
+        "EXPO_PUBLIC_NO_SNAP_SCRAPING": "1"
+      }
     }
   },
   "submit": {
