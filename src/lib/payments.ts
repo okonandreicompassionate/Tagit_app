@@ -17,6 +17,16 @@ import { authToken } from './supabase';
 
 const URL = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 
+/**
+ * Manually flipped, not auto-detected. The Edge Functions and the Paystack
+ * key aren't deployed yet — this is the single switch for "boost is a real,
+ * payable feature" vs. "boost is a coming-soon preview." Every entry point
+ * (events.tsx's boost row, event/[id].tsx's REACH panel, boost.tsx itself)
+ * reads this rather than duplicating the check, so turning boost on is a
+ * one-line change once boost-checkout/paystack-webhook are actually live.
+ */
+export const BOOST_LIVE = false;
+
 export class PaymentsNotConfigured extends Error {
   constructor() {
     super('Boost payments are not set up yet');

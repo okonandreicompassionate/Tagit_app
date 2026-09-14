@@ -2,9 +2,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, Field, Pill } from '../../src/components/ui';
+import { Button, Empty, Field, Pill } from '../../src/components/ui';
 import { BOOST_TIERS, formatNaira } from '../../src/lib/eventsApi';
-import { createBoostCheckout, PaymentsNotConfigured } from '../../src/lib/payments';
+import { BOOST_LIVE, createBoostCheckout, PaymentsNotConfigured } from '../../src/lib/payments';
 import { useMe, useTagStore } from '../../src/store/useTagStore';
 import { colors, radius, type } from '../../src/theme';
 
@@ -31,6 +31,24 @@ export default function BoostEvent() {
 
   const tier = BOOST_TIERS.find((t) => t.days === days) ?? BOOST_TIERS[0];
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+
+  // Every entry point that links here already hides behind BOOST_LIVE, so
+  // this only fires for a stale deep link or a cached older screen — still
+  // worth a real "not yet" rather than letting someone reach the payment
+  // form and fail at the very last step.
+  if (!BOOST_LIVE) {
+    return (
+      <View style={[s.root, { paddingTop: insets.top + 40 }]}>
+        <Empty
+          title="Boost is coming soon"
+          body={`Paying to rank ${event ? `"${event.name}" ` : 'an event '}above unboosted ones in Discover isn't switched on yet — check back soon.`}
+        />
+        <View style={{ padding: 24 }}>
+          <Button label="Back" variant="ghost" onPress={() => router.back()} />
+        </View>
+      </View>
+    );
+  }
 
   const pay = async () => {
     if (!id || !me || !emailOk || busy) return;

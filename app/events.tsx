@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventCard } from '../src/components/EventCard';
 import { Button, Empty, Field } from '../src/components/ui';
 import { discoverEvents, myHostedEvents } from '../src/lib/eventsApi';
+import { BOOST_LIVE } from '../src/lib/payments';
 import { isLive } from '../src/lib/rest';
 import { useJoinedEvents, useMe, useTagStore } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
@@ -281,19 +282,25 @@ export default function Events() {
                 onPress={() => router.push({ pathname: '/event/[id]', params: { id: item.id } })}
               />
               {/* Boost was previously buried inside the event screen, so a host
-                  had no way to discover they could pay for reach. */}
+                  had no way to discover they could pay for reach. Payments
+                  aren't live yet (BOOST_LIVE, src/lib/payments.ts) — shown
+                  as a preview rather than hidden, so hosts know it's coming
+                  without hitting a dead-end checkout screen. */}
               {item.hostCardId === me?.id && item.visibility === 'public' ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Boost ${item.name}`}
+                  disabled={!BOOST_LIVE}
                   onPress={() =>
                     router.push({ pathname: '/event/boost', params: { id: item.id } })
                   }
-                  style={s.boostRow}>
-                  <Text style={s.boostText}>
-                    {item.boostedUntil && item.boostedUntil > Date.now()
-                      ? '● Boosted — extend'
-                      : '↑ Boost this to reach more people'}
+                  style={[s.boostRow, !BOOST_LIVE && s.boostRowSoon]}>
+                  <Text style={[s.boostText, !BOOST_LIVE && s.boostTextSoon]}>
+                    {!BOOST_LIVE
+                      ? '↑ Boost this to reach more people — coming soon'
+                      : item.boostedUntil && item.boostedUntil > Date.now()
+                        ? '● Boosted — extend'
+                        : '↑ Boost this to reach more people'}
                   </Text>
                 </Pressable>
               ) : null}
@@ -406,4 +413,6 @@ const s = StyleSheet.create({
     borderColor: colors.snap,
   },
   boostText: { fontSize: 12.5, fontWeight: '800', color: colors.snap },
+  boostRowSoon: { borderColor: colors.border },
+  boostTextSoon: { color: colors.textDim },
 });

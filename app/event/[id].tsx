@@ -16,6 +16,7 @@ import { SwagToast } from '../../src/components/SwagToast';
 import { Button, Empty, Pill, Stat } from '../../src/components/ui';
 import { deleteEvent, getEvent } from '../../src/lib/eventsApi';
 import { encodeEvent } from '../../src/lib/payload';
+import { BOOST_LIVE } from '../../src/lib/payments';
 import { checkInEligibility, type Award } from '../../src/lib/swag';
 import { useTagStore } from '../../src/store/useTagStore';
 import { colors, radius, type } from '../../src/theme';
@@ -215,12 +216,14 @@ export default function EventScreen() {
           <View style={s.panel}>
             <Text style={s.panelTitle}>REACH</Text>
             <Text style={s.panelBody}>
-              Boost this event to rank it above unboosted ones in Discover. Featured brand slots
-              rank above every boost.
+              {BOOST_LIVE
+                ? 'Boost this event to rank it above unboosted ones in Discover. Featured brand slots rank above every boost.'
+                : "Paying to rank above unboosted events in Discover — coming soon."}
             </Text>
             <Button
-              label="Boost this event"
+              label={BOOST_LIVE ? 'Boost this event' : 'Coming soon'}
               variant="dark"
+              disabled={!BOOST_LIVE}
               onPress={() => router.push({ pathname: '/event/boost', params: { id: event.id } })}
             />
           </View>
