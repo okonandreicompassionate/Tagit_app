@@ -1,7 +1,8 @@
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Rect } from 'react-native-svg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glass } from '../src/components/Glass';
 import { CodePane } from '../src/panes/CodePane';
@@ -19,6 +20,11 @@ import { colors } from '../src/theme';
 const TAGGED = 0;
 const CAMERA = 1;
 const CODE = 2;
+/** Swipe order for the three in-place panes. Events (the fourth tab) isn't
+ * one of them — it navigates to the full /events screen instead of
+ * swapping a pane, so it has no slot here; swiping past Code should not
+ * leave the panes at all. */
+const SWIPE_ORDER = [TAGGED, CAMERA, CODE];
 
 /** How fresh an unseen incoming scan has to be to still greet with a popup —
  * old enough and it reads as a random ambush rather than "you just met". */
@@ -34,6 +40,13 @@ const RECENT_SCAN_MS = 10 * 60 * 1000;
 export default function Home() {
   const me = useMe();
   const router = useRouter();
+  // /events is presented as a modal *over* this screen (see _layout.tsx) —
+  // Home stays mounted underneath, so its "active" state has to come from
+  // the actual route, not local `tab` state. Setting `tab` to a fourth
+  // value that none of the three panes match would leave them all hidden
+  // — a blank screen — the moment the modal is dismissed and this screen
+  // is back in front with nothing telling it to show a pane again.
+  const onEvents = usePathname() === '/events';
   const insets = useSafeAreaInsets();
   const adoptCard = useTagStore((s) => s.adoptCard);
   const syncTagged = useTagStore((s) => s.syncTagged);
@@ -152,23 +165,43 @@ export default function Home() {
   if (isLive && !signedIn) return <Redirect href="/signin" />;
   if (!me) return <Redirect href="/onboarding" />;
 
+  // Only a clearly horizontal drag takes this over (activeOffsetX), and a
+  // clearly vertical one fails it immediately (failOffsetY) — every pane
+  // scrolls, and a swipe gesture that also ate those scrolls would make the
+  // panes themselves unusable. runOnJS: the only thing this ever does is
+  // call a React state setter, which has to happen on the JS thread anyway.
+  const swipe = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-15, 15])
+    .onEnd((e) => {
+      const idx = SWIPE_ORDER.indexOf(tab);
+      if (idx === -1) return;
+      if (e.translationX < -50 && idx < SWIPE_ORDER.length - 1) setTab(SWIPE_ORDER[idx + 1]);
+      else if (e.translationX > 50 && idx > 0) setTab(SWIPE_ORDER[idx - 1]);
+    })
+    .runOnJS(true);
+
   return (
     <View style={s.root}>
-      <View style={[StyleSheet.absoluteFill, tab !== TAGGED && s.hidden]}>
-        <TaggedPane
-          active={tab === TAGGED}
-          onOpenPerson={(id) => router.push(`/card/${id}`)}
-          onBackToCamera={() => setTab(CAMERA)}
-        />
-      </View>
-      <View style={[StyleSheet.absoluteFill, tab !== CAMERA && s.hidden]}>
-        <ScannerPane active={tab === CAMERA} onOpenCode={() => setTab(CODE)} />
-      </View>
-      <View style={[StyleSheet.absoluteFill, tab !== CODE && s.hidden]}>
-        <CodePane active={tab === CODE} onBackToCamera={() => setTab(CAMERA)} />
-      </View>
+      <GestureDetector gesture={swipe}>
+        <View style={StyleSheet.absoluteFill}>
+          <View style={[StyleSheet.absoluteFill, tab !== TAGGED && s.hidden]}>
+            <TaggedPane
+              active={tab === TAGGED}
+              onOpenPerson={(id) => router.push(`/card/${id}`)}
+              onBackToCamera={() => setTab(CAMERA)}
+            />
+          </View>
+          <View style={[StyleSheet.absoluteFill, tab !== CAMERA && s.hidden]}>
+            <ScannerPane active={tab === CAMERA} onOpenCode={() => setTab(CODE)} />
+          </View>
+          <View style={[StyleSheet.absoluteFill, tab !== CODE && s.hidden]}>
+            <CodePane active={tab === CODE} onBackToCamera={() => setTab(CAMERA)} />
+          </View>
+        </View>
+      </GestureDetector>
 
-      <Glass radius={0} intensity={50} style={[s.bar, { paddingBottom: insets.bottom + 16 }]}>
+      <Glass radius={0} intensity={55} style={[s.bar, { paddingBottom: insets.bottom + 16 }]}>
         <TabButton
           label="Tagged"
           active={tab === TAGGED}
@@ -187,6 +220,13 @@ export default function Home() {
           onPress={() => setTab(CODE)}
           icon={(c) => <CodeIcon color={c} />}
         />
+        <TabButton
+          label="Events"
+          active={onEvents}
+          activeColor={colors.blue}
+          onPress={() => router.push('/events')}
+          icon={(c) => <EventsIcon color={c} />}
+        />
       </Glass>
     </View>
   );
@@ -197,13 +237,17 @@ function TabButton({
   active,
   onPress,
   icon,
+  activeColor = colors.snap,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
   icon: (color: string) => React.ReactNode;
+  /** snap yellow for the core scan loop, blue for the one tab that leaves
+   * it — two accents so "this takes you somewhere else" reads at a glance. */
+  activeColor?: string;
 }) {
-  const color = active ? colors.snap : colors.textDim;
+  const color = active ? activeColor : colors.textDim;
   return (
     <Pressable
       accessibilityRole="button"
@@ -259,6 +303,20 @@ function CodeIcon({ color }: { color: string }) {
       <Rect x="14" y="3.5" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
       <Rect x="3.5" y="14" width="6.5" height="6.5" rx="1.3" stroke={color} strokeWidth={STROKE} />
       <Rect x="15.5" y="15.5" width="3.3" height="3.3" rx="0.8" fill={color} />
+    </Svg>
+  );
+}
+
+function EventsIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Rect x="3.5" y="5" width="17" height="15.5" rx="2.6" stroke={color} strokeWidth={STROKE} />
+      <Path d="M3.5 9.8 H20.5" stroke={color} strokeWidth={STROKE} />
+      <Path d="M7.8 3.2 V6.4" stroke={color} strokeWidth={STROKE} strokeLinecap="round" />
+      <Path d="M16.2 3.2 V6.4" stroke={color} strokeWidth={STROKE} strokeLinecap="round" />
+      <Circle cx="8.6" cy="14" r="1.15" fill={color} />
+      <Circle cx="12" cy="14" r="1.15" fill={color} />
+      <Circle cx="15.4" cy="14" r="1.15" fill={color} />
     </Svg>
   );
 }

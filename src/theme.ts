@@ -7,6 +7,11 @@ export const colors = {
   textDim: '#8A8A96',
   snap: '#FFFC00',
   snapInk: '#000000',
+  /** The second liquid-glass accent, paired with snap yellow — used for the
+   * active state of anything that isn't the single primary action (which
+   * stays snap yellow), so two active-feeling things next to each other
+   * don't compete for the same colour. */
+  blue: '#4DA3FF',
   ig: '#E1306C',
   tiktok: '#25F4EE',
   x: '#FFFFFF',
