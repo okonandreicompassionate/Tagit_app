@@ -8,6 +8,7 @@ const TABS = [
   { href: '/accounts', label: 'Accounts' },
   { href: '/database', label: 'Database' },
   { href: '/roadmap', label: 'Roadmap' },
+  { href: '/ai-context', label: 'AI Context' },
 ] as const;
 
 export function Nav() {
