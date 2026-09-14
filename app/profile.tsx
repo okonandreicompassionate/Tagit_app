@@ -1,4 +1,6 @@
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TierProgress } from '../src/components/Badges';
@@ -7,6 +9,24 @@ import { displayName } from '../src/lib/payload';
 import { useAbout, useCheckIns, useMe } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
 import { EVENT_TYPE_LABELS } from '../src/types';
+
+/**
+ * A quiet "am I actually on the latest version" line, since an OTA update is
+ * otherwise invisible — nothing in the UI changes to say one landed. Blank
+ * (`isEmbeddedLaunch`) means running exactly what was built into the APK,
+ * with no update applied on top of it yet.
+ */
+function buildLabel(): string {
+  const version = Constants.expoConfig?.version ?? '?';
+  if (Updates.isEmbeddedLaunch || !Updates.createdAt) return `v${version} · built-in, no update applied`;
+  const when = new Date(Updates.createdAt).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `v${version} · updated ${when}`;
+}
 
 /**
  * The profile — entirely derived, nothing typed.
@@ -150,6 +170,8 @@ export default function Profile() {
           ))
         )}
       </View>
+
+      <Text style={s.build}>{buildLabel()}</Text>
     </ScrollView>
   );
 }
@@ -203,4 +225,10 @@ const s = StyleSheet.create({
   },
   historyName: { fontSize: 15, fontWeight: '700', color: colors.text },
   historyMeta: { fontSize: 11.5, color: colors.textDim, fontWeight: '600' },
+  build: {
+    fontSize: 10,
+    color: colors.textDim,
+    opacity: 0.5,
+    textAlign: 'center',
+  },
 });

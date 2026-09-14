@@ -1,39 +1,18 @@
 import * as Brightness from 'expo-brightness';
 import * as Clipboard from 'expo-clipboard';
-import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import * as Updates from 'expo-updates';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TierProgress } from '../components/Badges';
 import { Glass } from '../components/Glass';
 import { Snapcode } from '../components/Snapcode';
 import { TagCode } from '../components/TagCode';
-import { Button, Stat } from '../components/ui';
+import { Button } from '../components/ui';
 import { TAB_BAR_HEIGHT } from '../lib/layout';
 import { displayName, encodeTag } from '../lib/payload';
 import { isLive } from '../lib/rest';
-import { useAbout, useActiveEvent, useMe, useStats, useTagStore } from '../store/useTagStore';
+import { useAbout, useActiveEvent, useMe, useTagStore } from '../store/useTagStore';
 import { colors, radius, type } from '../theme';
-
-/**
- * A quiet "am I actually on the latest version" line, since an OTA update is
- * otherwise invisible — nothing in the UI changes to say one landed. Blank
- * (`isEmbeddedLaunch`) means running exactly what was built into the APK,
- * with no update applied on top of it yet.
- */
-function buildLabel(): string {
-  const version = Constants.expoConfig?.version ?? '?';
-  if (Updates.isEmbeddedLaunch || !Updates.createdAt) return `v${version} · built-in, no update applied`;
-  const when = new Date(Updates.createdAt).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-  return `v${version} · updated ${when}`;
-}
 
 /** Your own code — the thing you hold up for someone else to scan. */
 export function CodePane({
@@ -48,7 +27,6 @@ export function CodePane({
   const me = useMe();
   const syncTagged = useTagStore((s) => s.syncTagged);
   const event = useActiveEvent();
-  const stats = useStats();
   const about = useAbout();
   const [copied, setCopied] = useState(false);
   const [showSnapcode, setShowSnapcode] = useState(false);
@@ -201,19 +179,6 @@ export function CodePane({
         <Text style={s.bio}>{about.line}</Text>
       </Pressable>
 
-      <View style={s.statsRow}>
-        <Stat value={stats.people} label="tagged" />
-        <Stat value={stats.longestStreak || '—'} label="best streak" />
-        <Stat
-          value={me.snapScore ? Intl.NumberFormat('en', { notation: 'compact' }).format(me.snapScore) : '—'}
-          label="snap score"
-        />
-      </View>
-
-      <View style={s.card}>
-        <TierProgress swag={me.swag} />
-      </View>
-
       <View style={{ gap: 10, width: '100%' }}>
         <Button label={copied ? 'Link copied' : 'Copy my link'} variant="dark" onPress={() => void copy()} />
         <Button label="Share my code" onPress={() => void share()} />
@@ -229,8 +194,6 @@ export function CodePane({
           <Text style={s.eventNote}>Join an event so your scans count on a leaderboard →</Text>
         </Pressable>
       )}
-
-      <Text style={s.build}>{buildLabel()}</Text>
     </ScrollView>
   );
 }
@@ -248,19 +211,6 @@ const s = StyleSheet.create({
   edit: { color: colors.snap, fontSize: 14, fontWeight: '800' },
   name: { ...type.h1, color: colors.text },
   bio: { ...type.body, color: colors.textDim, textAlign: 'center' },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  card: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-  },
   switcher: { flexDirection: 'row', gap: 8, width: '100%' },
   switchBtn: {
     flex: 1,
@@ -284,11 +234,5 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 10,
-  },
-  build: {
-    fontSize: 10,
-    color: colors.textDim,
-    opacity: 0.5,
-    textAlign: 'center',
   },
 });
