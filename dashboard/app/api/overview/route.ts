@@ -20,6 +20,7 @@ type EventRow = {
   sponsored: boolean;
   boost_score: number;
   boosted_until: string | null;
+  view_count: number;
 };
 
 type LeaderRow = { cardId: string; name: string; handle: string; swag: number; tags: number };
@@ -55,7 +56,7 @@ export async function GET() {
     const [events, leaderboard, boosts, cards, checkins, links] = await Promise.all([
       db
         .from('events')
-        .select('id,name,type,visibility,starts_at,location,city,host_card,sponsored,boost_score,boosted_until')
+        .select('id,name,type,visibility,starts_at,location,city,host_card,sponsored,boost_score,boosted_until,view_count')
         .order('starts_at', { ascending: true, nullsFirst: false })
         .limit(200)
         .returns<EventRow[]>(),

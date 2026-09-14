@@ -15,6 +15,7 @@ type EventRow = {
   sponsored: boolean;
   boost_score: number;
   boosted_until: string | null;
+  view_count: number;
 };
 
 type LeaderRow = { cardId: string; name: string; handle: string; swag: number; tags: number };
@@ -123,6 +124,7 @@ export function OverviewClient() {
                 <th className="px-4 py-3 font-semibold">Where</th>
                 <th className="px-4 py-3 font-semibold">Visibility</th>
                 <th className="px-4 py-3 font-semibold">Placement</th>
+                <th className="px-4 py-3 font-semibold">Views</th>
               </tr>
             </thead>
             <tbody>
@@ -147,12 +149,13 @@ export function OverviewClient() {
                         <span className="text-faint">—</span>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-dim">{e.view_count.toLocaleString()}</td>
                   </tr>
                 );
               })}
               {data && data.events.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-dim" colSpan={5}>
+                  <td className="px-4 py-6 text-dim" colSpan={6}>
                     No events yet.
                   </td>
                 </tr>

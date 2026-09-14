@@ -92,6 +92,10 @@ export type TagEvent = {
   sponsored: boolean;
   /** Verified check-ins, denormalised for list rendering. */
   attendeeCount: number;
+  /** How many times this event's card has been opened in the feed. Public,
+   * shown to everyone — unlike attendance it proves nothing, it's just
+   * reach. */
+  viewCount: number;
   createdAt: number;
   /**
    * How many of the viewer's accepted friends are verifiably tied to this

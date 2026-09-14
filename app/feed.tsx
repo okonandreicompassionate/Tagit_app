@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatWhen } from '../src/components/EventCard';
 import { Button, Empty, Pill } from '../src/components/ui';
-import { diversify, discoverEvents, getFeedPage } from '../src/lib/eventsApi';
+import { diversify, discoverEvents, getFeedPage, incrementEventView } from '../src/lib/eventsApi';
 import { useMe } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
 import { EVENT_TYPE_LABELS, type TagEvent } from '../src/types';
@@ -48,6 +48,26 @@ export default function Feed() {
   // Guards against onEndReached firing twice for the same page — FlatList
   // can call it repeatedly while a fetch is still in flight.
   const fetching = useRef(false);
+  // Once per event per time this screen is open — scrolling back past
+  // something already counted shouldn't count it again, but a genuinely
+  // new visit next time the feed is opened still should.
+  const viewedThisSession = useRef(new Set<string>());
+
+  /**
+   * A "view" is a card that actually held the screen, not one flicked past
+   * mid-swipe — 80% visible is what pagingEnabled naturally settles on
+   * between snaps, so this only fires once the swipe has actually landed.
+   */
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { item: TagEvent }[] }) => {
+      for (const { item } of viewableItems) {
+        if (viewedThisSession.current.has(item.id)) continue;
+        viewedThisSession.current.add(item.id);
+        void incrementEventView(item.id);
+      }
+    }
+  );
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
 
   const fetchPage = useCallback(
     async (offset: number): Promise<TagEvent[]> => {
@@ -135,6 +155,8 @@ export default function Feed() {
         getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
         onEndReachedThreshold={1.5}
         onEndReached={() => void loadMore()}
+        onViewableItemsChanged={onViewableItemsChanged.current}
+        viewabilityConfig={viewabilityConfig.current}
         ListFooterComponent={
           loadingMore ? (
             <View style={[s.center, { height, width }]}>
@@ -176,6 +198,8 @@ export default function Feed() {
     </View>
   );
 }
+
+const formatCompact = (n: number) => Intl.NumberFormat('en', { notation: 'compact' }).format(n);
 
 /** Stable per-event colours, so an event without artwork still has identity. */
 function gradientFor(id: string): [string, string] {
@@ -262,8 +286,15 @@ function EventPage({
               {event.description}
             </Text>
           ) : null}
-          {event.attendeeCount > 0 ? (
-            <Text style={s.going}>{event.attendeeCount} checked in</Text>
+          {event.attendeeCount > 0 || event.viewCount > 0 ? (
+            <Text style={s.going}>
+              {[
+                event.attendeeCount > 0 ? `${event.attendeeCount} checked in` : null,
+                event.viewCount > 0 ? `${formatCompact(event.viewCount)} views` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
           ) : null}
 
           <View style={{ gap: 8, marginTop: 8 }}>

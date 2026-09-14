@@ -31,6 +31,7 @@ type FeedRow = {
   boost_score: number;
   boosted_until: string | null;
   attendee_count: number;
+  view_count: number;
   created_at: string;
 };
 
@@ -56,6 +57,7 @@ const toEvent = (r: FeedRow): TagEvent => ({
   boostedUntil: ms(r.boosted_until),
   sponsored: r.sponsored ?? false,
   attendeeCount: r.attendee_count ?? 0,
+  viewCount: r.view_count ?? 0,
   createdAt: new Date(r.created_at).getTime(),
 });
 
@@ -229,6 +231,7 @@ export async function createEvent(input: NewEvent, hostCardId: string): Promise<
     boostScore: 0,
     sponsored: false,
     attendeeCount: 0,
+    viewCount: 0,
     createdAt: Date.now(),
   };
   if (!isLive) return local;
@@ -376,6 +379,26 @@ export async function uploadArtwork(eventId: string, localUri: string): Promise<
   } catch (err) {
     if (__DEV__) console.warn('[eventsApi] artwork upload failed:', err);
     return null;
+  }
+}
+
+/* ---------- views ---------- */
+
+/**
+ * Bumps an event's public view count by one. Fire-and-forget on purpose —
+ * a view is reach, not proof of anything, so it's not worth blocking the
+ * feed or surfacing an error over. Never throws.
+ */
+export async function incrementEventView(eventId: string): Promise<void> {
+  if (!isLive) return;
+  try {
+    await rest(`rpc/increment_event_view`, {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ p_event: eventId }),
+    });
+  } catch (err) {
+    if (__DEV__) console.warn('[eventsApi] incrementEventView failed:', err);
   }
 }
 

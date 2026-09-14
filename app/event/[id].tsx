@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatWhen } from '../../src/components/EventCard';
 import { SwagToast } from '../../src/components/SwagToast';
 import { Button, Empty, Pill, Stat } from '../../src/components/ui';
-import { deleteEvent, getEvent } from '../../src/lib/eventsApi';
+import { deleteEvent, getEvent, incrementEventView } from '../../src/lib/eventsApi';
 import { encodeEvent } from '../../src/lib/payload';
 import { BOOST_LIVE } from '../../src/lib/payments';
 import { checkInEligibility, type Award } from '../../src/lib/swag';
@@ -63,6 +63,10 @@ export default function EventScreen() {
         setEvent(found);
         setState('ready');
         rememberEvent(found);
+        // Not the host's own repeated visits while managing their event —
+        // those would inflate a number meant to mean "reach", not "how
+        // often I checked my own dashboard".
+        if (found.hostCardId !== me?.id) void incrementEventView(found.id);
 
         // `checkin=1` is set only by the scanner, so arriving here from the
         // events list never fakes attendance.
@@ -89,7 +93,7 @@ export default function EventScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, knownEvent, checkin, checkIn, rememberEvent]);
+  }, [id, knownEvent, checkin, checkIn, rememberEvent, me]);
 
   if (state === 'loading') {
     return (
@@ -186,6 +190,12 @@ export default function EventScreen() {
 
         <View style={s.statsRow}>
           <Stat value={event.attendeeCount} label="checked in" />
+          {event.viewCount > 0 ? (
+            <Stat
+              value={Intl.NumberFormat('en', { notation: 'compact' }).format(event.viewCount)}
+              label="views"
+            />
+          ) : null}
           {event.hostName ? <Stat value={event.hostName} label="host" /> : null}
         </View>
 

@@ -38,6 +38,7 @@ const event = (e: Partial<TagEvent> & Pick<TagEvent, 'id' | 'name' | 'type'>): T
   boostScore: 0,
   sponsored: false,
   attendeeCount: 0,
+  viewCount: 0,
   createdAt: Date.now(),
   ...e,
 });
@@ -55,6 +56,7 @@ const DEMO_EVENTS: TagEvent[] = [
     ticketUrl: 'https://flytime.example/tickets',
     sponsored: true,
     attendeeCount: 412,
+    viewCount: 3840,
   }),
   event({
     id: 'evt_unilag',
