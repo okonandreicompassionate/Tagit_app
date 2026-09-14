@@ -8,13 +8,14 @@ export function LoginForm() {
   const params = useSearchParams();
   const from = params.get('from') || '/';
 
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy || !password) return;
+    if (busy || !email || !password) return;
     setBusy(true);
     setError(null);
 
@@ -22,7 +23,7 @@ export function LoginForm() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -41,8 +42,26 @@ export function LoginForm() {
   return (
     <form onSubmit={submit} className="grid gap-4">
       <div className="grid gap-1.5">
+        <label htmlFor="email" className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
+          Admin email
+        </label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError(null);
+          }}
+          autoFocus
+          autoComplete="username"
+          className="h-12 rounded-xl border border-edge bg-surface px-4 text-[15px] text-white outline-none transition focus:border-snap"
+        />
+      </div>
+
+      <div className="grid gap-1.5">
         <label htmlFor="password" className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
-          Admin password
+          Password
         </label>
         <input
           id="password"
@@ -52,7 +71,6 @@ export function LoginForm() {
             setPassword(e.target.value);
             setError(null);
           }}
-          autoFocus
           autoComplete="current-password"
           className="h-12 rounded-xl border border-edge bg-surface px-4 text-[15px] text-white outline-none transition focus:border-snap"
         />
@@ -62,7 +80,7 @@ export function LoginForm() {
 
       <button
         type="submit"
-        disabled={!password || busy}
+        disabled={!email || !password || busy}
         className="h-12 rounded-full bg-snap font-bold text-black transition hover:brightness-95 disabled:opacity-40"
       >
         {busy ? 'Checking…' : 'Sign in'}

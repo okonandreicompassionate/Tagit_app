@@ -1,20 +1,24 @@
 /**
  * The admin session, as a signed cookie value.
  *
- * Deliberately not a JWT library or a database session table — this gates one
- * shared password for a small team, not a multi-user auth system. A JWT would
- * add a dependency and a set of standard-but-irrelevant claims for what is
- * really just "prove you know SESSION_SECRET, and do it before this expires."
- *
  * Built on the Web Crypto API (`crypto.subtle`), not Node's `crypto` module.
  * This file is imported by middleware.ts, which runs on the Edge Runtime —
  * Edge has no access to `node:crypto` at all, and bundling it fails the build
  * outright. Web Crypto is available in both the Edge Runtime and modern
  * Node, so one implementation works everywhere this file is imported.
  *
- * Format: `<expiresAtMs>.<hexHmac>`. The HMAC covers the expiry, so a client
- * cannot extend its own session by editing the timestamp.
+ * Format: `<base64url(JSON payload)>.<hexHmac>`. The HMAC covers the whole
+ * payload — id, email, role, expiry — so a client can't edit any of it
+ * (extend its own session, or hand itself the `god` role) without
+ * invalidating the signature.
+ *
+ * No `Buffer` here on purpose (also an Edge-Runtime constraint) — base64url
+ * encode/decode goes through `btoa`/`atob`, which exist in both Edge and
+ * modern Node, wrapped to survive UTF-8 (`email` isn't guaranteed ASCII).
  */
+
+export type AdminRole = 'admin' | 'god';
+export type AdminSession = { adminId: string; email: string; role: AdminRole; expiresAt: number };
 
 const COOKIE_NAME = 'tagit_admin_session';
 const SESSION_HOURS = 12;
@@ -60,10 +64,26 @@ async function sign(payload: string): Promise<string> {
   return toHex(sig);
 }
 
+function toBase64Url(str: string): string {
+  const b64 = btoa(unescape(encodeURIComponent(str)));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(b64url: string): string {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(b64url.length / 4) * 4, '=');
+  return decodeURIComponent(escape(atob(b64)));
+}
+
 /** Builds a fresh, valid session token. Called only after the password check. */
-export async function createSessionToken(): Promise<string> {
+export async function createSessionToken(admin: {
+  id: string;
+  email: string;
+  role: AdminRole;
+}): Promise<string> {
   const expiresAt = Date.now() + SESSION_HOURS * 60 * 60 * 1000;
-  const payload = String(expiresAt);
+  const payload = toBase64Url(
+    JSON.stringify({ adminId: admin.id, email: admin.email, role: admin.role, expiresAt })
+  );
   return `${payload}.${await sign(payload)}`;
 }
 
@@ -80,17 +100,23 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Verifies a token from the cookie. */
-export async function verifySessionToken(token: string | undefined | null): Promise<boolean> {
-  if (!token) return false;
+/** Verifies a token from the cookie. Returns the session it carries, or null. */
+export async function verifySessionToken(token: string | undefined | null): Promise<AdminSession | null> {
+  if (!token) return null;
   const [payload, mac] = token.split('.');
-  if (!payload || !mac) return false;
+  if (!payload || !mac) return null;
 
   const expected = await sign(payload);
-  if (!constantTimeEqual(mac, expected)) return false;
+  if (!constantTimeEqual(mac, expected)) return null;
 
-  const expiresAt = Number(payload);
-  return Number.isFinite(expiresAt) && Date.now() < expiresAt;
+  try {
+    const data = JSON.parse(fromBase64Url(payload)) as Partial<AdminSession>;
+    if (!data.adminId || !data.email || !data.role || !data.expiresAt) return null;
+    if (Date.now() >= data.expiresAt) return null;
+    return data as AdminSession;
+  } catch {
+    return null;
+  }
 }
 
 export { COOKIE_NAME, SESSION_HOURS };

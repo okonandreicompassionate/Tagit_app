@@ -1,44 +1,61 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { COOKIE_NAME, SESSION_HOURS, createSessionToken } from '@/lib/session';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { DUMMY_HASH, verifyPassword } from '@/lib/adminAuth';
+import { COOKIE_NAME, SESSION_HOURS, createSessionToken, type AdminRole } from '@/lib/session';
 
-function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  // Compare against a fixed-length buffer first so the length of a wrong
-  // guess is never observable via timing, only the final result is.
-  if (bufA.length !== bufB.length) {
-    timingSafeEqual(bufA, bufA);
-    return false;
-  }
-  return timingSafeEqual(bufA, bufB);
-}
+export const dynamic = 'force-dynamic';
+
+type AdminRow = { id: string; email: string; password_hash: string; role: AdminRole };
 
 export async function POST(req: Request) {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) {
+  try {
+    const body = await req.json().catch(() => null);
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
+
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Enter an email and password.' }, { status: 401 });
+    }
+
+    const db = supabaseAdmin();
+    const { data, error } = await db
+      .from('admins')
+      .select('id,email,password_hash,role')
+      .eq('email', email)
+      .maybeSingle<AdminRow>();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 502 });
+
+    // Runs a real PBKDF2 computation either way, against a dummy hash when
+    // the email doesn't exist — otherwise "no such account" responds
+    // measurably faster than "wrong password", which is exactly the kind
+    // of leak a login form shouldn't have.
+    const ok = data
+      ? await verifyPassword(password, data.password_hash)
+      : await verifyPassword(password, DUMMY_HASH);
+
+    if (!data || !ok) {
+      // Same message either way — don't confirm which part was wrong.
+      return NextResponse.json({ error: 'Incorrect email or password.' }, { status: 401 });
+    }
+
+    const res = NextResponse.json({ ok: true, role: data.role });
+    res.cookies.set(
+      COOKIE_NAME,
+      await createSessionToken({ id: data.id, email: data.email, role: data.role }),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: SESSION_HOURS * 60 * 60,
+        path: '/',
+      }
+    );
+    return res;
+  } catch (err) {
     return NextResponse.json(
-      { error: 'ADMIN_PASSWORD is not configured on the server.' },
+      { error: err instanceof Error ? err.message : 'Unknown error' },
       { status: 500 }
     );
   }
-
-  const body = await req.json().catch(() => null);
-  const password = typeof body?.password === 'string' ? body.password : '';
-
-  if (!password || !safeEqual(password, expected)) {
-    // Same message either way — don't confirm whether the field was empty
-    // vs. wrong, that's not information a login form should leak.
-    return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 });
-  }
-
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE_NAME, await createSessionToken(), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SESSION_HOURS * 60 * 60,
-    path: '/',
-  });
-  return res;
 }

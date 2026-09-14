@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const TABS = [
   { href: '/', label: 'Overview' },
@@ -11,9 +12,34 @@ const TABS = [
   { href: '/ai-context', label: 'AI Context' },
 ] as const;
 
+// Reserved for the 'god' role — fetched at runtime (see below) rather than
+// baked into TABS, since which tabs render depends on who's signed in.
+const GOD_TABS = [
+  { href: '/moderation', label: 'Moderation' },
+  { href: '/admins', label: 'Admins' },
+] as const;
+
 export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
+  // null while loading, so a regular admin never sees the god tabs flash
+  // on screen for one frame before this resolves.
+  const [role, setRole] = useState<'admin' | 'god' | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (alive && data?.role) setRole(data.role);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const tabs = role === 'god' ? [...TABS, ...GOD_TABS] : TABS;
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -50,8 +76,8 @@ export function Nav() {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <nav className="flex gap-1">
-            {TABS.map((t) => {
+          <nav className="flex flex-wrap gap-1">
+            {tabs.map((t) => {
               const active = pathname === t.href;
               return (
                 <Link
