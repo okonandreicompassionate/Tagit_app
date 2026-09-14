@@ -61,7 +61,13 @@ group by e.id, h.nickname, h.name;
 
 grant select on public.event_feed to anon, authenticated;
 
-create or replace function public.discover_feed(
+-- CREATE OR REPLACE FUNCTION cannot change a RETURNS TABLE signature's
+-- column list (unlike CREATE OR REPLACE VIEW, which can add columns) —
+-- Postgres refuses with "cannot change return type of existing function"
+-- since the row type is defined by the OUT parameters. Drop first.
+drop function if exists public.discover_feed(text, int, int);
+
+create function public.discover_feed(
   p_viewer text,
   p_offset int default 0,
   p_limit  int default 20
