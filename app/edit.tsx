@@ -15,8 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TierProgress } from '../src/components/Badges';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { isLive } from '../src/lib/api';
+import { ApiError, rest } from '../src/lib/rest';
 import { SOCIALS, SOCIAL_ORDER } from '../src/lib/socials';
-import { ensureUserId } from '../src/lib/supabase';
+import { ensureUserId, signOut } from '../src/lib/supabase';
 import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
 import type { SocialKey } from '../src/types';
@@ -38,6 +39,7 @@ export default function EditCard() {
   const [snapScore, setSnapScore] = useState(me?.snapScore ? String(me.snapScore) : '');
   const [socials, setSocials] = useState<Partial<Record<SocialKey, string>>>(me?.socials ?? {});
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // Surfaced at the bottom of this screen so the state of the backend is
   // checkable on a real device, where there's no console to read.
   const [authState, setAuthState] = useState<'checking' | 'signed-in' | 'anonymous'>('checking');
@@ -87,19 +89,51 @@ export default function EditCard() {
     router.back();
   };
 
+  /**
+   * The RPC does the real work — every scan, check-in and hosted event, gone
+   * from the server. `reset()` only ever cleared this phone's local copy,
+   * which left the account itself untouched; that's the gap this closes.
+   *
+   * "No card for this account" (nothing to delete server-side, e.g. an
+   * already-orphaned session) is treated as success rather than an error —
+   * the user's intent is satisfied either way. Any other failure aborts
+   * before touching local state, so a network blip can't make the app claim
+   * a deletion that didn't happen.
+   */
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      if (isLive) {
+        try {
+          await rest('rpc/delete_my_account', { method: 'POST', body: '{}' });
+        } catch (err) {
+          const nothingToDelete =
+            err instanceof ApiError && err.message.includes('no card for this account');
+          if (!nothingToDelete) {
+            Alert.alert("Couldn't delete your account", 'Check your connection and try again.');
+            setDeleting(false);
+            return;
+          }
+        }
+        await signOut();
+      }
+      reset();
+      router.replace('/onboarding');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const confirmReset = () =>
     Alert.alert(
-      'Start over?',
-      'Deletes your card and everyone you’ve tagged on this phone. This cannot be undone.',
+      'Delete your account?',
+      "Deletes your card, every scan and every check-in from Tagit's servers, then clears this phone. This cannot be undone.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete everything',
+          text: 'Delete my account',
           style: 'destructive',
-          onPress: () => {
-            reset();
-            router.replace('/onboarding');
-          },
+          onPress: () => void deleteAccount(),
         },
       ]
     );
@@ -176,8 +210,12 @@ export default function EditCard() {
                 : 'Backend: connected · unclaimed (enable anonymous sign-in to lock it)'}
         </Text>
 
-        <Pressable accessibilityRole="button" onPress={confirmReset} style={{ padding: 10 }}>
-          <Text style={s.reset}>Delete my card and start over</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={confirmReset}
+          disabled={deleting}
+          style={{ padding: 10, opacity: deleting ? 0.5 : 1 }}>
+          <Text style={s.reset}>{deleting ? 'Deleting…' : 'Delete my account'}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

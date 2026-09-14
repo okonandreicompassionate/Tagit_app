@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import * as Updates from 'expo-updates';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TierProgress } from '../src/components/Badges';
 import { Avatar, Empty, Pill, Stat } from '../src/components/ui';
@@ -27,6 +27,8 @@ function buildLabel(): string {
   });
   return `v${version} · updated ${when}`;
 }
+
+const PRIVACY_URL = 'https://okonandreicompassionate.github.io/Tagit_app/privacy.html';
 
 /**
  * The profile — entirely derived, nothing typed.
@@ -171,6 +173,9 @@ export default function Profile() {
         )}
       </View>
 
+      <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}>
+        <Text style={s.privacyLink}>Privacy policy</Text>
+      </Pressable>
       <Text style={s.build}>{buildLabel()}</Text>
     </ScrollView>
   );
@@ -225,6 +230,12 @@ const s = StyleSheet.create({
   },
   historyName: { fontSize: 15, fontWeight: '700', color: colors.text },
   historyMeta: { fontSize: 11.5, color: colors.textDim, fontWeight: '600' },
+  privacyLink: {
+    fontSize: 12,
+    color: colors.textDim,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
   build: {
     fontSize: 10,
     color: colors.textDim,
