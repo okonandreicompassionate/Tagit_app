@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,9 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TierProgress } from '../src/components/Badges';
 import { Avatar, Button, Field } from '../src/components/ui';
 import { isLive } from '../src/lib/api';
+import { currentIdentifier, signOut } from '../src/lib/auth';
 import { ApiError, rest } from '../src/lib/rest';
 import { SOCIALS, SOCIAL_ORDER } from '../src/lib/socials';
-import { ensureUserId, signOut } from '../src/lib/supabase';
 import { useMe, useTagStore } from '../src/store/useTagStore';
 import { colors, radius, type } from '../src/theme';
 import type { SocialKey } from '../src/types';
@@ -40,19 +40,24 @@ export default function EditCard() {
   const [socials, setSocials] = useState<Partial<Record<SocialKey, string>>>(me?.socials ?? {});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Surfaced at the bottom of this screen so the state of the backend is
-  // checkable on a real device, where there's no console to read.
-  const [authState, setAuthState] = useState<'checking' | 'signed-in' | 'anonymous'>('checking');
+  const [loggingOut, setLoggingOut] = useState(false);
+  // Refetched on focus, not just mount — coming back from /link after
+  // actually adding one is the one moment this is guaranteed to have
+  // changed, and this screen doesn't get remounted for that, only refocused.
+  const [recovery, setRecovery] = useState<'checking' | string | null>('checking');
 
-  useEffect(() => {
-    let alive = true;
-    void ensureUserId().then((uid) => {
-      if (alive) setAuthState(uid ? 'signed-in' : 'anonymous');
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      setRecovery('checking');
+      void currentIdentifier().then((id) => {
+        if (alive) setRecovery(id);
+      });
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
 
   if (!me) return <View style={s.root} />;
 
@@ -138,6 +143,37 @@ export default function EditCard() {
       ]
     );
 
+  /**
+   * Ends the session and wipes this phone's copy — nothing server-side is
+   * touched, unlike deleteAccount above. Without a recovery email/phone
+   * linked, this is a one-way trip: signing back in starts a fresh
+   * anonymous session with no route back to this card, so the confirmation
+   * says that plainly rather than letting "log out" sound reversible by
+   * default.
+   */
+  const logOut = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      reset();
+      router.replace('/signin');
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  const confirmLogOut = () =>
+    Alert.alert(
+      'Log out?',
+      typeof recovery === 'string'
+        ? `Clears this phone. Sign back in with ${recovery} to get this card back.`
+        : "Clears this phone — and there's no email or phone on this account yet, so there's no way back to this card afterward. Add one first if you want to keep it.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log out', style: 'destructive', onPress: () => void logOut() },
+      ]
+    );
+
   return (
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
@@ -200,18 +236,43 @@ export default function EditCard() {
 
         <Button label={saving ? 'Saving…' : 'Save card'} onPress={() => void save()} disabled={saving} />
 
-        <Text style={s.backend}>
-          {!isLive
-            ? 'Backend: local only — set EXPO_PUBLIC_SUPABASE_URL to sync'
-            : authState === 'checking'
-              ? 'Backend: connected · checking sign-in…'
-              : authState === 'signed-in'
-                ? 'Backend: connected · card claimed to this phone'
-                : 'Backend: connected · unclaimed (enable anonymous sign-in to lock it)'}
-        </Text>
+        {isLive ? (
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>GETTING BACK IN</Text>
+            {recovery === 'checking' ? (
+              <Text style={s.idNote}>Checking…</Text>
+            ) : typeof recovery === 'string' ? (
+              <Text style={s.idNote}>
+                {recovery} gets this exact card back on any phone — same scans, same history.
+              </Text>
+            ) : (
+              <>
+                <Text style={s.idNote}>
+                  No email or phone on this account yet — lose this phone and there's no way back
+                  to this card.
+                </Text>
+                <Button
+                  label="Add a recovery email or number"
+                  variant="dark"
+                  onPress={() => router.push('/link')}
+                />
+              </>
+            )}
+          </View>
+        ) : (
+          <Text style={s.backend}>Backend: local only — set EXPO_PUBLIC_SUPABASE_URL to sync</Text>
+        )}
 
         <Pressable accessibilityRole="button" onPress={() => router.push('/blocked')} style={{ padding: 10 }}>
           <Text style={s.blockedLink}>Manage blocked people</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={confirmLogOut}
+          disabled={loggingOut}
+          style={{ padding: 10, opacity: loggingOut ? 0.5 : 1 }}>
+          <Text style={s.blockedLink}>{loggingOut ? 'Logging out…' : 'Log out'}</Text>
         </Pressable>
 
         <Pressable

@@ -118,12 +118,105 @@ export async function signOut(): Promise<void> {
   await supabase?.auth.signOut().catch(() => {});
 }
 
+/**
+ * Attaches an email or phone to the *current* session instead of starting a
+ * new one — see verifyLinkCode below for why this exists and what it fixes.
+ */
+export async function sendLinkCode(input: string): Promise<SendResult> {
+  if (!supabase) return { ok: false, reason: 'No backend configured.' };
+
+  const id = parseIdentifier(input);
+  if (!id) return { ok: false, reason: 'That doesn’t look like a phone number or an email.' };
+
+  const { error } = await supabase.auth.updateUser(
+    id.kind === 'phone' ? { phone: id.value } : { email: id.value }
+  );
+
+  if (!error) return { ok: true, kind: id.kind };
+
+  const msg = error.message.toLowerCase();
+  if (id.kind === 'phone' && (msg.includes('provider') || msg.includes('sms'))) {
+    return {
+      ok: false,
+      reason: 'Text messages aren’t switched on yet. Use an email address for now.',
+    };
+  }
+  if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+    return {
+      ok: false,
+      reason: 'That’s already tied to a different account — sign in with it instead, from the sign-in screen.',
+    };
+  }
+  if (msg.includes('rate') || msg.includes('too many')) {
+    return { ok: false, reason: 'Too many tries. Wait a minute and try again.' };
+  }
+  return { ok: false, reason: error.message };
+}
+
+/**
+ * Confirms an email/phone added by sendLinkCode above.
+ *
+ * The bug this exists to kill: plain sign-in (sendCode/verifyCode) always
+ * resolves to its *own* independent Supabase user — correct for "I'm on a
+ * new phone, find my account", wrong for "I already have a card open right
+ * now, remember this email for it". Used for the second case, it silently
+ * created a second, disconnected identity: the existing card stayed owned
+ * by whatever session made it (often an invisible anonymous one), the new
+ * email pointed at a brand new empty account, and re-typing the same
+ * Snapchat handle came back "taken" — by yourself, under a different id.
+ *
+ * verifyOtp's `email_change` / `phone_change` type instead confirms the
+ * identifier against the session that's *already signed in*, so auth.uid()
+ * never changes — whatever card it already owns stays owned, now
+ * recoverable by this email too.
+ */
+export async function verifyLinkCode(input: string, code: string): Promise<VerifyResult> {
+  if (!supabase) return { ok: false, reason: 'No backend configured.' };
+
+  const id = parseIdentifier(input);
+  if (!id) return { ok: false, reason: 'Enter your number or email again.' };
+
+  const token = code.replace(/\D/g, '');
+  if (token.length < 4) return { ok: false, reason: 'Enter the code from the message.' };
+
+  const { data, error } = await supabase.auth.verifyOtp(
+    id.kind === 'phone'
+      ? { phone: id.value, token, type: 'phone_change' }
+      : { email: id.value, token, type: 'email_change' }
+  );
+
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('expired')) return { ok: false, reason: 'That code has expired. Send a new one.' };
+    if (msg.includes('invalid')) return { ok: false, reason: 'That code isn’t right. Check and try again.' };
+    return { ok: false, reason: error.message };
+  }
+
+  const userId = data.user?.id ?? data.session?.user?.id;
+  return userId ? { ok: true, userId } : { ok: false, reason: 'Didn’t go through. Try again.' };
+}
+
 /** The signed-in user id, or null. */
 export async function currentUserId(): Promise<string | null> {
   if (!supabase) return null;
   try {
     const { data } = await supabase.auth.getSession();
     return data.session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether this session has a recovery email/phone attached yet, for the
+ * Edit card screen — distinct from `currentUserId`, which is truthy even
+ * for an anonymous session with nothing recoverable about it.
+ */
+export async function currentIdentifier(): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.email || data.user?.phone || null;
   } catch {
     return null;
   }

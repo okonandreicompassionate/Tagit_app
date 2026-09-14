@@ -91,18 +91,3 @@ export async function authToken(): Promise<string | undefined> {
     return KEY;
   }
 }
-
-/**
- * Drops the current session (anonymous or OTP-verified) so the next call to
- * `ensureUserId` starts a fresh one. Used on account deletion — the server
- * side of that identity is gone, so the client shouldn't keep presenting it.
- */
-export async function signOut(): Promise<void> {
-  if (!supabase) return;
-  try {
-    await supabase.auth.signOut();
-  } catch {
-    // Best-effort — a failed sign-out shouldn't block the caller; the local
-    // reset that follows it clears the store either way.
-  }
-}
