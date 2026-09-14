@@ -118,15 +118,12 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "92202ff1-be26-4d19-adb9-29eca1b05daa"
+        "projectId": "24bd1fcb-6b96-4d8d-a054-644589190286"
       }
     },
-    "owner": "relmxdgamer",
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/92202ff1-be26-4d19-adb9-29eca1b05daa"
-    }
+    "owner": "raemus"
   }
 }
